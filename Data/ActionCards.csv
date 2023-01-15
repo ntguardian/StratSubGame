@@ -1,0 +1,51 @@
+Filename,Title,Side,Text
+rickover,Admiral Rickover,USA,Advance any Capability track of your choice or automatically gain access to nuclear boats. You cannot build diesel-electric boats this turn. If played after 1980 diesel-electric boats are unavailable the rest of the game.
+gorshkov,Admiral Gorshkov,USSR,Advance any Capability track of your choice or automatically gain access to nuclear boats. The USA player adds the topmost USA ACCIDENT card in the draw deck to their hand. (Shuffle the deck if searched.)
+ussrmeltdown,ACCIDENT: Nuclear Meltdown,USA,Roll:\n0-3: Nothing happens\n4-6: Return USSR nuclear boat to nearest port\n7-9: Destroy a USSR nuclear boat
+ussrmaintain,ACCIDENT: Bad Maintenance,USA,Roll.\n0-3: Nothing happens\n4-6: Return USSR boat to nearest port\n7-9; Destroy a USSR boat
+ussrfire,ACCIDENT: Fire,USA,Roll.\n0-3: Nothing happens\n4-6: Return USSR boat to nearest port\n7-9; Destroy a USSR boat
+ussrflood,ACCIDENT: Flooding,USA,Roll.\n0-3: Nothing happens\n4-6: Return USSR boat to nearest port\n7-9; Destroy a USSR boat
+ussrcook,ACCIDENT: Torpedo Cookoff,USA,Roll.\n0-1: Nothing happens\n2-3: Return USSR boat to nearest port\n4-9; Destroy a USSR boat
+usameltdown,ACCIDENT: Nuclear Meltdown,USSR,Roll:\n0-6: Nothing happens\n7-8: Return USA nuclear boat to nearest port\n9: Destroy a USA nuclear boat
+usamaintenance,ACCIDENT: Bad Maintenance,USSR,Roll.\n0-3: Nothing happens\n4-6: Return USA boat to nearest port\n7-9; Destroy a USA boat
+usafire,ACCIDENT: Fire,USSR,Roll.\n0-3: Nothing happens\n4-6: Return USA boat to nearest port\n7-9; Destroy a USA boat
+usaflood,ACCIDENT: Flooding,USSR,Roll.\n0-3: Nothing happens\n4-6: Return USA boat to nearest port\n7-9; Destroy a USA boat
+usacook,ACCIDENT: Torpedo Cookoff,USSR,Roll.\n0-1: Nothing happens\n2-3: Return USA boat to nearest port\n4-9; Destroy a USA boat
+crash,ACCIDENT: Crash,Neutral,When a boat trails another boat: roll.\n0-3: Nothing happens\n4-8: Both boats returned to nearest port\n9: Trailed boat destroyed; owner may <span><b>RESOLVE CRISIS</b></span>\n\n<span><i>Cannot discard and must play if possible.</i></span>
+buryyou,We Will Bury You!,Neutral,<span><b>RESOLVE CRISIS</b></span>\n\n<span><i>Cannot discard and must play; remove from game</i></span>
+evilempire,Evil Empire,Neutral,<span><b>RESOLVE CRISIS</b></span>\n\n<span><i>Cannot discard and must play; remove from game</i></span>
+cmc,Cuban Missile Crisis,Neutral,<span><b>RESOLVE CRISIS</b></span>\n\n<span><i>Cannot discard and must play; remove from game</i></span>
+koreawar,Korean War,Neutral,Place an anti-American fleet in 7F zone. USA claims this card if fleet is pacified this turn; otherwise USSR claims this card.\n\n<span><i>Remove from game</i></span>
+aiwar,Arab-Israeli War,Neutral,Place either an anti-American or anti-Soviet fleet in 6F Zone. Power claims this card if fleet is pacified this turn; otherwise opposite power claims this card.
+libyawar,Libya War,Neutral,Place an anti-American fleet in 6F zone. USA claims this card if fleet is pacified this turn; otherwise USSR claims this card.\n\n<span><i>Remove from game</i></span>
+vietwar,Vietnam War,Neutral,Place an anti-American fleet in 7F zone. USA claims this card if fleet is pacified this turn; otherwise USSR claims this card.
+persiacrisis,Persian Gulf Crisis,Neutral,Place an anti-American fleet in 5F zone. USA claims this card if fleet is pacified this turn; otherwise USSR claims this card.\n\n<span><i>Remove from game</i></span>
+angolawar,Angolan War,Neutral,Place an anti-American fleet in 6F zone. USA claims this card if fleet is pacified this turn; otherwise USSR claims this card.\n\n<span><i>Remove from game</i></span>
+algeriawar,Algerian War,Neutral,Place an anti-American fleet in 6F zone. USA claims this card if fleet is pacified this turn; otherwise USSR claims this card.\n\n<span><i>Remove from game</i></span>
+falkwar,Falklands War,Neutral,Place an anti-American fleet in 2F zone. USA claims this card if fleet is pacified this turn; otherwise USSR claims this card. Only British fleets and boats can participate.\n\n<span><i>Remove from game</i></span>
+cubarev,Cuban Revolution,Neutral,Place an anti-American fleet in 2F zone. USA claims this card if fleet is pacified this turn; otherwise USSR claims this card.\n\n<span><i>Remove from game</i></span>
+sof,Special Operations,Neutral,Special SOF mission: In a fleet zone roll: if below Defenses claim this card.
+usaasroc,ASROC,USA,USA using ASROC; torpedo attacks automatically succeed but always prompt <span><b>RESOLVE CRISIS</b></span>. Stays in play until USA voluntarily removes from game.
+ussrntorp,Nuclear Torpedoes,USSR,USSR using nuclear torpedoes; torpedo attacks automatically succeed but always prompt <span><b>RESOLVE CRISIS</b></span>. Stays in play until USSR voluntarily removes from game.
+sosus,SOSUS Deployed,USA,USA must discard another card. For the rest of the game +1 to all USA detection rolls in 2F or 3F zones.\n\n<span><i>Remnove from game</i></span>
+fundingup,More Funding,Neutral,Draw three cards
+cutfunding,Funding Cut,Neutral,Randomly discard two cards from opponent hand
+walker,Walker Spy Ring,USSR,Search the top 6 cards of the Intel for a card and add it to your Intel cards.
+walkerfound,Walker Spy Ring Found,USA,Remove Walker Spy Ring and this card from the game.
+steel,Improved Steel,Neutral,Leave in play until Defenses advanced. +1 to Improve Defenses roll.
+acoustic,Acoustic Dampening,Neutral,Leave in play until Defenses advanced. +1 to Improve Defenses roll.
+range,Better Ballistic Missiles,Neutral,Leave in play and may treat as a tech track. Upon successfully researched: for rest of game +1 to SSB/SSBN defenses
+bettertorp,Improved Torpedoes,Neutral,Leave in play until Lethality advanced. +1 to Improve Letahlity roll.
+bettersonar,Improved Sonar,Neutral,Leave in play until Detection advanced. +1 to Improve Detection roll.
+halibut,<i>USS Halibut</i>,USA,Leave in play and may treat as a tech track. Upon successfully researched: add the Halibut boat to your fleet then remove from game. Halibut may only be used for Intel missions and looks at +2 cards in Intel deck.
+wiretap,Underwater Wiretap,USA,Playable with successful Intel mission: for the remainder of the game USA gets 1 card from Intel deck if SSK/SSN deployed in 7F.
+pelton,Ronald Pelton,USSR,USSR player searches top 5 cards from the Intel deck and draws one.\n\n<span><i>Remove from game</i></span>
+ussrbuild,Soviet Industry,USSR,Build 3 SSKs.
+nc3,NC3 Reform,Neutral,???
+sellboat,Soviet Arms Sales,USSR,USSR loses 1-4 SSKs (player choice) and gains 1 Action card for every two SSKs lost. The next time the USSR player spawns an anti-American fleet: USA pacification rolls modified by -X for number of SSKs removed.
+ukboat,UK Nuclear Subs,USA,Gain 2 Blue Allied nuclear boats in zone 6F of your choice.
+frboat,French Nuclear Subs,USA,Gain 2 Blue Allied nuclear boats in zone 6F of your choice.
+bomber,Strategic Bombers,Neutral,USA player draws three leverage cards and discards two action cards from hand.
+protest,Anti-War Protests,USSR,After USA makes a pacification roll: discard two USA Action cards at random.
+arctic,Soviet Arctic Patrols,USSR,???
+fleet,Shipbuilding,Neutral,Place a fleet in any port.

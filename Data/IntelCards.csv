@@ -1,0 +1,21 @@
+Text,Filename
+Blank,blank
+Draw a Legerage card,drawleverage
+Draw two more Intel cards,drawintel
+At the start of a new round: draw another card,drawcards
+If behind on Lethality: roll to advance Lethality,rolllethal
+If behind on Defenses: roll to advance Defenses,rolldefense
+If behind on Detection: roll to advance Detection,rolldetect
+Look at three random cards in your opponent's hand,seehand
+Look at three random opponent Leverage cards,seeleverage
+Look at three random opponent Intel cards,seeintel
+Automatically succeed a Detection roll,succeeddetect
+Your opponent's Detection roll fails,faildetect
++1 to Detection rolls,betterdetect
++1 to Lethality rolls,betterlethal
++1 to Defenses,betterdefenses
+Next round: opponent plays without a screen,noscreen
+Look at an additional card with drawing an Intel card (you still pick 1),intelsearch
+Look at an additional card when drawing a Leverage card (you still pick 1),leveragesearch
+You may move 1 submarine after allocation this round to an adjacent area,movesub
+

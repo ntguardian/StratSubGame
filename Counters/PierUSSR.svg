@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="15mm"
+   height="15mm"
+   viewBox="0 0 15 15"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   sodipodi:docname="PierUSSR.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#111111"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     width="15mm"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:zoom="4.0000002"
+     inkscape:cx="78.874996"
+     inkscape:cy="16.624999"
+     inkscape:window-width="1920"
+     inkscape:window-height="1057"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer3">
+    <inkscape:grid
+       type="xygrid"
+       id="grid12412" />
+    <sodipodi:guide
+       position="5.0270834,7.5"
+       orientation="0,1"
+       id="guide12414"
+       inkscape:label=""
+       inkscape:locked="false"
+       inkscape:color="rgb(0,0,255)" />
+    <sodipodi:guide
+       position="7.5,10.766667"
+       orientation="-1,0"
+       id="guide12418"
+       inkscape:label=""
+       inkscape:locked="false"
+       inkscape:color="rgb(0,0,255)" />
+  </sodipodi:namedview>
+  <defs
+     id="defs2">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient10412">
+      <stop
+         style="stop-color:#ff0000;stop-opacity:1;"
+         offset="0"
+         id="stop10408" />
+      <stop
+         style="stop-color:#ff7f2a;stop-opacity:1"
+         offset="1"
+         id="stop10410" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient10332"
+       inkscape:swatch="gradient">
+      <stop
+         style="stop-color:#aa0000;stop-opacity:1;"
+         offset="0"
+         id="stop10328" />
+      <stop
+         style="stop-color:#aa0000;stop-opacity:0;"
+         offset="1"
+         id="stop10330" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient10412"
+       id="linearGradient10414"
+       x1="7.5"
+       y1="4.2333331"
+       x2="7.5"
+       y2="12.435416"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <g
+     inkscape:label="Background"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="opacity:1;fill:url(#linearGradient10414);fill-opacity:1;stroke-width:0.15"
+       id="BG"
+       width="15"
+       height="15"
+       x="-5.5511151e-17"
+       y="0" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="Label">
+    <text
+       xml:space="preserve"
+       style="font-size:4.46796px;line-height:1.25;font-family:Wingdings;-inkscape-font-specification:Wingdings;fill:#cccccc;stroke-width:0.788097"
+       x="7.3363805"
+       y="8.9357758"
+       id="Type"><tspan
+         sodipodi:role="line"
+         id="tspan7120"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Stencil;-inkscape-font-specification:Stencil;text-align:center;text-anchor:middle;fill:#cccccc;stroke-width:0.788097"
+         x="7.3363805"
+         y="8.9357758">PIER</tspan></text>
+  </g>
+</svg>
