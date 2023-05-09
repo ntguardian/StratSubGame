@@ -10,9 +10,15 @@ if (!suppressPackageStartupMessages(require("argparser"))) {
   require("argparser")
 }
 
+library(lpSolve)
+library(tibble)
+library(dplyr)
+library(purrr)
+library(tidyr)
+
 # FUNCTIONS --------------------------------------------------------------------
 
-#' Linear Optimizer Coefficients for Kola Scenario ASW Game
+#' ASW Linear Optimizer Coefficients for Kola Scenario ASW Game
 #'
 #' Obtains Kola ASW scenario game coefficients that can be used for linear
 #' programming problem
@@ -51,8 +57,8 @@ if (!suppressPackageStartupMessages(require("argparser"))) {
 #' @return Vector with coefficients for the two routes the target could take,
 #'         which are probabilities of detection
 #' @examples
-#' sub_strategy_kola_coef()
-sub_strategy_kola_coef <- function(ships = 0,
+#' asw_strategy_kola_coef()
+asw_strategy_kola_coef <- function(ships = 0,
                                    subs = 0,
                                    planes = 0,
                                    ships_green_ice = 0,
@@ -90,13 +96,255 @@ sub_strategy_kola_coef <- function(ships = 0,
         "ice_uk" = 1 - ice_uk_detect_prob) * (1 - kola_detect_prob)
 }
 
+#' Sub Payoff Linear Optimizer Coefficients for Kola Scenario ASW Game
+#'
+#' Payoff column for the submarine in the ASW Kola peninsula scenario
+#'
+#' This returns the payoff function of the submarine. It requires running
+#' \code{\link{asw_intercept_probs}} first to generate the interception
+#' probabilities. Once done this will appropriately account for time on station
+#' due to the route taken.
+#'
+#' @param asw_intercept_probs A vector returned by \code{asw_strategy_kola_coef}
 #' @param max_time_on_station Maximum time on station for target
 #' @param time_lost_green_ice Time lost for target when taking Greenland-Iceland
-#'        route
+#'                            route
+#' @return Vector of payoff for submarine
+#' @examples
+#' sub_strategy_kola_coef(asw_strategy_kola_coef())
+sub_strategy_kola_coef <- function(asw_intercept_probs,
+                                   max_time_on_station = 5,
+                                   time_lost_green_ice = 1) {
+  sub_payoff <- max_time_on_station * (1 - asw_intercept_probs)
+  sub_payoff - c("green_ice" = time_lost_green_ice, "ice_uk" = 0)
+}
+
+#' Generate ASW Strategies and Payoffs for Kola ASW Scenario
+#' 
+#' Generate a \code{\link[base]{matrix}} containing the strategies and the
+#' payoffs for the ASW side of the Kola scenario
+#'
+#' The last columns contain the actual game matrix while the first columns are
+#' descriptors of the strategies.
+#'
+#' @param ships,subs,planes Number of ships, subs, and planes for ASW force in
+#'                          scenario
+#' @param ... Parameters to pass to \code{\link{asw_strategy_kola_coef}}; note
+#'            that  parameters like \code{ships_green_ice},
+#'            \code{subs_green_ice}, and \code{subs_kola} are ignored
+#' @return Matrix of ASW payoff (probability of interception depending on
+#'         submarine route)
+#' @examples
+#' generate_asw_kola_strats(5, 4, 3)
+#' @export
+generate_asw_kola_strats <- function(ships, subs, planes, ...) {
+  ship_counts <- 0:ships
+  plane_counts <- 0:planes
+  sub_count_prelim <- combn(subs + 2, 2)
+  sub_counts <- cbind(sub_count_prelim[1,] - 1,
+                      sub_count_prelim[2,] - sub_count_prelim[1,] - 1)
+  colnames(sub_counts) <- c("subs_green_ice", "subs_kola")
+
+  game_mat <- Reduce(rbind, lapply(ship_counts,
+                                   FUN = function(ships_green_ice) {
+    Reduce(rbind, lapply(plane_counts, FUN = function(planes_green_ice) {
+      Reduce(rbind, apply(sub_counts, MARGIN = 1, FUN = function(sub_alloc) {
+        c("ships_green_ice" = ships_green_ice,
+          "ships_ice_uk" = ships - ships_green_ice,
+          "planes_green_ice" = planes_green_ice,
+          "planes_ice_uk" = planes - planes_green_ice,
+          sub_alloc,
+          "subs_ice_uk" = subs - sum(sub_alloc),
+          asw_strategy_kola_coef(ships = ships,
+                                 subs = subs,
+                                 planes = planes,
+                                 subs_green_ice = sub_alloc["subs_green_ice"],
+                                 subs_kola = sub_alloc["subs_kola"],
+                                 planes_green_ice = planes_green_ice,
+                                 ships_green_ice = ships_green_ice,
+                                 ...))
+  }, simplify = FALSE))}))}))
+  colnames(game_mat) <- gsub("green_ice.subs_green_ice", "pay_green_ice",
+    gsub("ice_uk.subs_green_ice", "pay_ice_uk", colnames(game_mat)))
+  rownames(game_mat) <- NULL
+  game_mat
+}
+
+#' Generate Sub Strategies and Payoffs for Kola ASW Scenario
+#'
+#' Generate a \code{\link[base]{matrix}} containing the strategies and the
+#' payoffs for the submarine side of the Kola scenario
+#'
+#' The last columns contain the actual game matrix while the first columns are
+#' descriptors of the strategies.
+#'
+#' @param asw_strat_matrix Matrix returned by \code{\link{generate_asw_strats}}
+#'                         containing the ASW detection probabilities
+#' @param ... Additional parameters to pass to
+#'            \code{\link{sub_strategy_kola_coef}}
+#' @return Matrix of strategies with payoffs for the intruding submarine
+#' @examples
+#' generate_sub_kola_strats(generate_asw_kola_strats(5, 4, 3))
+#' @export
+generate_sub_kola_strats <- function(asw_strat_matrix, ...) {
+  asw_probs <- asw_strat_matrix[, c("pay_green_ice", "pay_ice_uk")]
+  colnames(asw_probs) <- c("green_ice", "ice_uk")
+  sub_payoff <- apply(asw_probs, MARGIN = 1,
+    FUN = function(asw_intercept_probs) {
+      sub_strategy_kola_coef(asw_intercept_probs, ...)
+  })
+  rownames(sub_payoff) <- c("pay_green_ice", "pay_ice_uk")
+  cbind(asw_strat_matrix[,
+                         !(colnames(asw_strat_matrix) %in% c("pay_green_ice",
+                                                             "pay_ice_uk"))],
+    t(sub_payoff))
+}
+
+#' Find Optimal Submarine Strategy Given ASW Strategy
+#'
+#' Find the submarine's optimal response to a given ASW strategy
+#'
+#' This obtains the ASW force's optimal strategy given the strategy of the
+#' submarine, a key step in obtaining the game's optimal solution.
+#'
+#' @param asw_coef Row of the ASW payoff matrix corresponding to the strategy
+#'                 for which to solve the program
+#' @param sub_strat_row Row of the submarine payoff matrix that corresponds to
+#'                      the strategy given in \code{asw_coef}
+#' @param sub_strat_matrix Matrix of the submarine payoff matrix
+#' @return Value and strategic allocation for given strategies
+#' @examples
+#' asw_strat <- generate_asw_kola_strats(5, 4, 3)
+#' sub_strat <- generate_sub_kola_strats(asw_strat)
+#' strat_linear_prog_solve(asw_strat[, "pay_green_ice"],
+#'                         sub_strat[, "pay_green_ice"],
+#'                         sub_strat[, c("pay_green_ice", "pay_ice_uk")])
+strat_linear_prog_solve <- function(asw_coef, sub_strat_col, sub_strat_matrix) {
+  sub_coefs_matrix <- sub_strat_col - sub_strat_matrix
+  constraint_mat <- rbind(rep(1, length(asw_coef)),
+                          t(sub_coefs_matrix))
+  constraint_type <- c("==", rep(">=", ncol(sub_coefs_matrix)))
+  constraint_number <- c(1, rep(0, ncol(sub_coefs_matrix)))
+  lp_obj <- lp(direction = "max",
+     objective.in = asw_coef,
+     const.mat = constraint_mat,
+     const.dir = constraint_type,
+     const.rhs = constraint_number
+  )[c("objval", "solution", "status")]
+  lp_obj
+}
+
+#' Solve Submarine Theater Chokepoint ASW Game
+#'
+#' Completely solve the theater ASW game
+#'
+#' This solves the game by running \code{\link{strat_linear_prog_solve}} for
+#' every pure strategy available to the intruding submarine. The optimal
+#' strategies for the ASW force are returned and the optimal strategy can be
+#' selected.
+#'
+#' @param asw_strat_matrix \code{link[base]{matrix}} with game payoff matrix for
+#'                         asw force
+#' @param sub_strat_matrix \code{link[base]{matrix}} with game payoff matrix for
+#'                         submarine force
+#' @param game_cols \code{\link[base]{vector}} describing which columns of both
+#'                  \code{asw_strat_matrix} and \code{sub_strat_matrix} contain
+#'                  the actual game payoff matrix; the others are presumed to be
+#'                  useful but not presently relevant information, and while not
+#'                  a part of the solver, will be a part of the returned data
+#'                  frame
+#' @param full Return the full data frame; otherwise, only the rows with the
+#'             best value for the ASW force
+#' @return A \code{\link[tibble]{tibble}} containing optimal payoff to ASW force
+#'         and the corresponding optimal strategy of the submarine force
+#' @examples
+#' asw_strat <- generate_asw_kola_strats(5, 4, 3)
+#' sub_strat <- generate_sub_kola_strats(asw_strat)
+#' asw_chokepoint_game_solution_df(asw_strat, sub_strat,
+#'                                 c("pay_green_ice", "pay_ice_uk"))
+#' @export
+asw_chokepoint_game_solution_df <- function(asw_strat_matrix, sub_strat_matrix,
+                                            game_cols = 1:ncol(asw_strat_matrix),
+                                            full = FALSE) {
+  if (is.character(game_cols)) {
+    game_cols <- which(colnames(asw_strat_matrix) %in% game_cols)
+  }
+  not_game_cols <- which(!(1:ncol(asw_strat_matrix) %in% game_cols))
+  asw_game_mat <- asw_strat_matrix[, game_cols]
+  sub_game_mat <- sub_strat_matrix[, game_cols]
+
+  solution_df <- as_tibble(asw_strat_matrix[, not_game_cols]) %>%
+    bind_cols(as_tibble(asw_game_mat) %>%
+      rename_with(.fn = ~ paste0(.x, "_asw"))) %>%
+    bind_cols(as_tibble(sub_game_mat) %>%
+      rename_with(.fn = ~ paste0(.x, "_sub")))
+
+  solution_cols <- lapply(1:ncol(asw_game_mat), FUN = function(strat_col) {
+      strat_linear_prog_solve(asw_game_mat[, strat_col],
+        sub_game_mat[, strat_col],
+        sub_game_mat)})
+  game_solution_list <- map(solution_cols, ~ .x$solution)
+  names(game_solution_list) <- paste0(colnames(asw_game_mat), "_optim")
+  game_solution_df <- as_tibble(game_solution_list)
+  solution_codes <- map_int(solution_cols, ~ .x$status)
+  names(solution_codes) <- colnames(asw_game_mat)
+  solution_value <- map_dbl(solution_cols, ~ .x$objval)
+  names(solution_value) <- colnames(asw_game_mat)
+
+  if (full) {
+    solution_df <- bind_cols(solution_df, game_solution_df)
+  } else {
+    solution_df <- bind_cols(solution_df,
+      game_solution_df[which.max(solution_value)])
+    solution_codes <- solution_codes[which.max(solution_value)]
+    solution_value <- max(solution_value)
+  }
+
+  list("solution_df" = solution_df,
+       "solution_codes" = solution_codes,
+       "solution_value" = solution_value)
+}
 
 # EXECUTABLE SCRIPT MAIN FUNCTIONALITY -----------------------------------------
 
-main <- function() {
+main <- function(ships = 0,
+                 subs = 0,
+                 planes = 0,
+                 shipssweep = 1,
+                 subssweep = 3,
+                 planessweep = 15,
+                 kolawidth = 1/4,
+                 greenicewidth = 1,
+                 iceukwidth = 2,
+                 searchconst = 1,
+                 delouse = 0,
+                 maxtime = 5,
+                 greenicetimeloss = 1) {
+  asw_strats <- generate_asw_kola_strats(
+    ships = ships,
+    subs = subs,
+    planes = planes,
+    ships_sweep = shipssweep,
+    subs_sweep = subssweep,
+    planes_sweep = planessweep,
+    kola_width = kolawidth,
+    ice_uk_width = iceukwidth,
+    green_ice_width = greenicewidth,
+    search_const = searchconst,
+    delouse_total_sweep = delouse
+  )
+  sub_strats <- generate_sub_kola_strats(
+    asw_strats,
+    max_time_on_station = maxtime,
+    time_lost_green_ice = greenicetimeloss
+  )
+  solution <- asw_chokepoint_game_solution_df(asw_strat, sub_strat,
+                                              c("pay_green_ice", "pay_ice_uk"))
+  solution_df <- solution$solution_df
+  solution_col <- paste0(names(solution$solution_codes), "_optim")
+
+  cat("Probability of interception:", solution$value, "\n")
+  cat("Sub transit path:", substr(names(solution$solution_codes), 5, 999), "\n")
 }
 
 # INTERFACE DEFINITION AND COMMAND LINE IMPLEMENTATION -------------------------
