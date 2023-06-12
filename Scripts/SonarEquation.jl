@@ -45,6 +45,10 @@ function parse_commandline()
             help = "Difference between angles (degrees) to use for raytracing"
             arg_type = Float64
             default = nothing
+        "--svpstep", "-P"
+            help = "When dividing SVP, new (constant) distance between slices (ft)"
+            arg_type = Float64
+            default = nothing
         "--velocity", "-v"
             help = "Sound velocity to use if SVP not in use (ft/sec)"
             arg_type = Float64
@@ -1177,6 +1181,7 @@ function main(;
               minangle :: Union{Nothing, Real} = nothing,
               maxangle :: Union{Nothing, Real} = nothing,
               stepangle :: Union{Nothing, Real} = nothing,
+              svpstep :: Union{Nothing, Real} = nothing,
               velocity :: Union{Nothing, Real} = nothing,
               freq :: Union{Nothing, Real} = nothing,
               pdiameter :: Union{Nothing, Real} = nothing,
@@ -1266,7 +1271,8 @@ function main(;
                 isnothing(tgtrange) || isnothing(emtdepth))
                 error("Called in raytracing mode; must have all of maxdepth, minangle, stepangle, maxangle, tgtrange, emtdepth")
             end
-            fine_svp_obj = svp_refine(svp_obj, max_depth = maxdepth)
+            fine_svp_obj = svp_refine(svp_obj, max_depth = maxdepth,
+                                      Δ = svpstep)
 
             # plot(fine_svp_obj.velocity, fine_svp_obj.depth, yflip = true,
             #      legend = false)
