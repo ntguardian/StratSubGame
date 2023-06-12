@@ -1305,7 +1305,7 @@ function main(;
             if isnothing(freq)
                 error("Need freq if computing transmission loss without ray tracing")
             end
-            tl = spherical_tl(attenuation_coef_thorp(freq), drange)
+            tl = spherical_tl(attenuation_coef_thorp(freq), drange / 3)
         end
     end
     if tlonly
