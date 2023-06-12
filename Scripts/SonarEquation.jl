@@ -1187,6 +1187,7 @@ function main(;
               tl :: Union{Nothing, Real} = nothing,
               tlonly :: Bool = false,
               raycsv :: Union{Nothing, String} = nothing,
+              raydf :: Union{Nothing, DataFrame} = nothing,    # Not used by command line interface
               rayloadcsv :: Union{Nothing, String} = nothing,
               bouncecsv :: Union{Nothing, String} = nothing,
               svpcsv :: Union{Nothing, String} = nothing,
@@ -1231,7 +1232,21 @@ function main(;
     if isnothing(tl)
         # Logic here could be tightened; it seems that the current logic implied
         # here will result in duplicate code
-        if !isnothing(rayloadcsv)
+        if !isnothing(raydf)
+            ray_combined_df = raydf
+            containing_ray_pos = ray_position_above_df(ray_combined_df, drange,
+                                                       ddepth) |>
+                get_containing_rays_df
+            
+            if nrow(containing_ray_pos) == 0
+                tl = Inf
+            else
+                tl = min([raytrace_tl(
+                         r.lower_angle, r.upper_angle, r.depth_lower_angle/3,
+                         r.depth_upper_angle/3, detector_range/3
+                        ) for r in eachrow(containing_ray_pos)]...)
+            end
+        elseif !isnothing(rayloadcsv)
             ray_combined_df = DataFrame(CSV.File(rayloadcsv))
             containing_ray_pos = ray_position_above_df(ray_combined_df, drange,
                                                        ddepth) |>
