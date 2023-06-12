@@ -7,15 +7,127 @@
 # ArgParse: A package for handling command line arguments
 using ArgParse
 
+# INTERFACE DEFINITION AND COMMAND LINE IMPLEMENTATION -------------------------
+
+function parse_commandline()
+    s = ArgParseSettings()
+
+    @add_arg_table! s begin
+        "ddepth"
+            arg_type = Float64
+            help = "Depth of detector (ft)"
+            required = true
+        "drange"
+            arg_type = Float64
+            help = "Range of the detector from the target (ft)"
+            required = true
+        "--emtdepth", "-E"
+            arg_type =Float64
+            help = "Depth of sound emitter (ft)"
+            default = nothing
+        "--tgtrange", "-T"
+            arg_type = Float64
+            help = "Maximum distance for ray tracing (ft)"
+            default = nothing
+        "--maxdepth", "-M"
+            arg_type = Float64
+            default = 36161.0
+            help = "The maximum depth (ft) of the ocean, the maximum presuming to be the ocean bottom"
+        "--minangle", "-a"
+            help = "Minimum angle (degrees) to use for raytracing"
+            arg_type = Float64
+            default = nothing
+        "--maxangle", "-A"
+            help = "Maximum angle (degrees) to use for raytracing"
+            arg_type = Float64
+            default = nothing
+        "--stepangle", "-s"
+            help = "Difference between angles (degrees) to use for raytracing"
+            arg_type = Float64
+            default = nothing
+        "--velocity", "-v"
+            help = "Sound velocity to use if SVP not in use (ft/sec)"
+            arg_type = Float64
+            default = nothing
+        "--freq", "-f"
+            help = "Frequency of sound (Hz)"
+            arg_type = Float64
+            default = nothing
+        "--pdiameter", "-i"
+            help = "Diameter of piston hydrophone (ft) (supply if wanting calculations of DI for this type of hydrophone)"
+            arg_type = Float64
+            default = nothing
+        "--lelements", "-e"
+            help = "Number of elements in a line hydrophone (supply if wanting calculation of DI for this type of hydrophone)"
+            arg_type = UInt128
+            default = nothing
+        "--lspacing", "-p"
+            help = "Spacing of elements in a line hydrophone (ft) (supply if wanting calculation of DI for this type of hydrophone)"
+            arg_type = Float64
+            default = nothing
+        "--di", "-I"
+            help = "Directivity index (dB); no calculation of DI will be done if supplied"
+            arg_type = Float64
+            default = nothing
+        "--dionly"
+            help = "Compute and report DI only"
+            action = :store_true
+        "--tl", "-t"
+            help = "Transmission loss (dB); no calculation of TL will be done if supplied"
+            arg_type = Float64
+            default = nothing
+        "--tlonly"
+            help = "Compute and report TL only"
+            action = :store_true
+        "--raycsv", "-r"
+            help = "Location to save ray tracing results (for use later)"
+            arg_type = String
+            default = nothing
+        "--rayloadcsv", "-R"
+            help = "Location of CSV file with precomputed ray tracing paths (will skip ray tracing computation)"
+            arg_type = String
+            default = nothing
+        "--bouncecsv", "-b"
+            help = "Location to save ray tracing bounce information (for use later)"
+            arg_type = String
+            default = nothing
+        "--svpcsv", "-S"
+            help = "Location of CSV file containing SVP information (depth (ft), velocity (ft/sec))"
+            arg_type = String
+            default = nothing
+        "--sl", "-l"
+            help = "Source level (dB)"
+            arg_type = Float64
+            default = nothing
+        "--nlmean", "-N"
+            help = "Mean noise level (dB)"
+            arg_type = Float64
+            default = nothing
+        "--nlsd", "-n"
+            help = "Standard deviation of noise level (dB)"
+            arg_type = Float64
+            default = nothing
+        "--dt", "-d"
+            help = "Detection threshold (dB)"
+            arg_type = Float64
+            default = nothing
+    end
+
+    return Dict([(Symbol(key), val) for (key, val) in parse_args(s)])
+end
+
+if !isinteractive()
+    parsed_args = parse_commandline()
+end
+
 # PACKAGES ---------------------------------------------------------------------
 
 using Distributions
 using Interpolations
 using Plots
 using StatsPlots
-using ProgressBars
 using DataFrames
-using Pipe
+using CSV
 
 # STRUCTS ----------------------------------------------------------------------
 
@@ -69,30 +181,6 @@ struct sonar_noise <: Sonar
     dt :: Real
 end
 
-"""
-    svp
-
-Sound velocity profile object
-
-Tracks the sound velocity profile as a function of depth
-
-...
-# Fields
-- `depth :: Vector{Real}`: Depth of velocity
-- `velocity :: Vector{Real}`: Velocity at some depth
-...
-"""
-struct svp
-    depth :: Vector{Real}
-    velocity :: Vector{Real}
-    function svp(depth, velocity)
-        if length(depth) != length(velocity)
-            error("depth and velocity of unequal length")
-        end
-        new(sort(depth), velocity[sortperm(depth)])
-    end
-end
-
 @doc raw"""
     sonar_passive
 
@@ -122,6 +210,30 @@ struct sonar_passive <: Sonar
     nl :: UnivariateDistribution
     di :: Real
     dt :: Real
+end
+
+"""
+    svp
+
+Sound velocity profile object
+
+Tracks the sound velocity profile as a function of depth
+
+...
+# Fields
+- `depth :: Vector{Real}`: Depth of velocity
+- `velocity :: Vector{Real}`: Velocity at some depth
+...
+"""
+struct svp
+    depth :: Vector{Real}
+    velocity :: Vector{Real}
+    function svp(depth, velocity)
+        if length(depth) != length(velocity)
+            error("depth and velocity of unequal length")
+        end
+        new(sort(depth), velocity[sortperm(depth)])
+    end
 end
 
 # FUNCTIONS --------------------------------------------------------------------
@@ -208,7 +320,7 @@ function piston_di(diameter :: Real, wavelength :: Real) :: Real
 end
 
 @doc raw"""
-    line_di(elements :: Int64, spacing :: Real,
+    line_di(elements :: Unsigned, spacing :: Real,
             wavelength :: Real) :: Real
 
 Directivity index of a line sonar
@@ -221,7 +333,7 @@ wavelength of the sound wave to be detected.
 
 ...
 # Arguments
-- `elements :: Int64`: Number of elements in the sonar array
+- `elements :: Unsigned`: Number of elements in the sonar array
 - `spacing :: Real`: The spacing of the elements in the array
 - `wavelength :: Real`: The wavelength of the sound to be detected
 ...
@@ -234,7 +346,7 @@ julia> line_di(20, 10.0, 49.3)
 [...]
 ```
 """
-function line_di(elements   :: Int64,
+function line_di(elements   :: Unsigned,
                  spacing    :: Real,
                  wavelength :: Real) :: Real
     log10(elements / (1 + 2 / elements *
@@ -454,8 +566,10 @@ bottom and ocean surface (at a depth of 0) are presumed to be perfectly
 reflective. (If a depth of 0 is not in `svp`, the raytracing algorithm will
 terminate at the most shallow depth if the ray would extend beyond it.)
 
-This function returns a vector of tuples, each generated by
-[`raytrace_step`](@raytrace_step).
+This function returns a tuple with an element `trace` being a vector of tuples
+with the position and depth of the ray, and an element `bounce`, a vector of
+tuples with elements `position`, `depth`, and `angle`, giving the grazing angle
+and location of either surface or bottom bounces of the ray.
 
 ...
 # Arguments
@@ -503,20 +617,21 @@ julia> svp_mat = [# depth    velocity
 [...]
 julia> test_svp = svp(svp_mat[:, 1], svp_mat[:, 2])
 [...]
-julia> raytrace(test_svp, 500, 1 * π/180, 1000, max_iter = 1000)
+julia> raytrace(test_svp, 500, 1 * π/180, 1000, max_iter = UInt128(1000))
 [...]
 ```
 """
 function raytrace(svp :: svp, depth :: Real, angle :: Real,
                   max_position :: Real;
-                  max_iter :: UInt128 = typemax(UInt128)) :: Vector{Tuple{Real,
-                                                                          Real}}
+                  max_iter :: UInt128 = typemax(UInt128))
+    bounce = NamedTuple{(:position, :depth, :angle), Tuple{Real, Real, Real}}[]
     if angle > π/2 || angle ≤ -π/2
         throw(DomainError(angle, "Must use radian angle ∈ (-π/2, π/2]"))
     elseif angle == 0
-        return [(0, depth), (max_position, depth)]
+        return (trace=[(0, depth), (max_position, depth)], bounce=bounce)
     elseif angle == π/2
-        return [(0, depth), (0, 0)]
+        return (trace=[(0, depth), (0, 0)],
+                bounce=[(position=0, depth=0, angle=angle)])
     end
 
     trace = Tuple{Real, Real}[(0, depth)]
@@ -543,13 +658,15 @@ function raytrace(svp :: svp, depth :: Real, angle :: Real,
             end
         end
         if depth ∈ Set([0, svp.depth[end]])
+            push!(bounce, (position=trace[end][1], depth=trace[end][2],
+                           angle=angle))
             angle *= -1
         else
             angle = snell(angle, velocity, svp.velocity[depth_idx])
         end
     end
 
-    return trace
+    return (trace=trace, bounce=bounce)
 end
 
 @doc raw"""
@@ -774,12 +891,12 @@ end
 """
     raytrace_angle_df(svp_obj :: svp, depth :: Real, angles :: Vector{Real},
                       max_position :: Real;
-                      max_iter :: UInt128 = typemax(UInt128)) :: DataFrame
+                      max_iter :: UInt128 = typemax(UInt128)) :: NamedTuple{(:ray, :bounce), Tuple{DataFrame, DataFrame}}
 
 Raytrace by angle
 
 Generates multiple ray tracings depending on angle and generates a `DataFrame`
-with rays depending on initial angle.
+with rays depending on initial angle. Also collects bounce information.
 
 ...
 # Arguments
@@ -822,22 +939,30 @@ function raytrace_angle_df(svp_obj, depth,
                            max_position;
                            position_grid = [(0.0:1.0:max_position)...],
                            itp_type = Gridded(Linear()),
-                           max_iter = typemax(UInt128)) :: DataFrame
+                           max_iter = typemax(UInt128)) :: NamedTuple{(:ray, :bounce), Tuple{DataFrame, DataFrame}}
     multiray = raytrace.(Ref(svp_obj), depth, angles, max_position,
                          max_iter = max_iter)
     if isnothing(position_grid)
-        vcat([DataFrame(angle = ang,
-                        range = [p[1] for p in ray],
-                        depth = [p[2] for p in ray])
-              for (ray, ang) in zip(multiray, angles)]..., cols = :union)
+        ray_df = vcat([DataFrame(angle = ang,
+                                 range = [p[1] for p in ray[:trace]],
+                                 depth = [p[2] for p in ray[:trace]])
+                       for (ray, ang) in zip(multiray, angles)]..., cols = :union)
     else
-        vcat([DataFrame(angle = ang,
-                        range = position_grid,
-                        depth = (interpolate((Interpolations.deduplicate_knots!([convert(Float64, p[1]) for p in ray]),),
-                                             [p[2] for p in ray],
-                                             itp_type))(position_grid))
-              for (ray, ang) in zip(multiray, angles)]..., cols = :union)
+        ray_df = vcat([DataFrame(angle = ang,
+                                 range = position_grid,
+                                 depth = (interpolate((Interpolations.deduplicate_knots!([convert(Float64, p[1]) for p in ray[:trace]]),),
+                                                      [p[2] for p in ray[:trace]],
+                                                      itp_type))(position_grid))
+                       for (ray, ang) in zip(multiray, angles)]..., cols = :union)
     end
+
+    bounce_df = vcat([DataFrame(angle = ang,
+                                position = [r[:position] for r in ray[:bounce]],
+                                depth = [r[:depth] for r in ray[:bounce]],
+                                graze = [r[:angle] for r in ray[:bounce]])
+                      for (ray, ang) in zip(multiray, angles)]..., cols = :union)
+    
+    return (ray=ray_df, bounce=bounce_df)
 end
 
 """
@@ -875,7 +1000,7 @@ julia> test_svp = svp(svp_mat[:, 1], svp_mat[:, 2])
 [...]
 julia> fine_test_svp = svp_refine(test_svp, max_depth = 200)
 [...]
-julia> rad = raytrace_angle_df(fine_test_svp, 50, [-2 * π/180, 2 * π/180], 20)
+julia> rad = raytrace_angle_df(fine_test_svp, 50, [-2 * π/180, 2 * π/180], 20)[:ray]
 [...]
 julia> ray_position_above_df(rad, 20, 50)
 [...]
@@ -926,7 +1051,7 @@ julia> test_svp = svp(svp_mat[:, 1], svp_mat[:, 2])
 [...]
 julia> fine_test_svp = svp_refine(test_svp, max_depth = 200)
 [...]
-julia> rad = raytrace_angle_df(fine_test_svp, 50, [-2 * π/180, 2 * π/180], 20)
+julia> rad = raytrace_angle_df(fine_test_svp, 50, [-2 * π/180, 2 * π/180], 20)[:ray]
 [...]
 julia> rad_ab = ray_position_above_df(rad, 20, 50)
 [...]
@@ -985,88 +1110,258 @@ function raytrace_tl(lower_angle :: Real, upper_angle :: Real, depth1 :: Real,
     10 * log10(range * abs(depth1 - depth2) / (upper_angle - lower_angle))
 end
 
-# INTERFACE DEFINITION AND COMMAND LINE IMPLEMENTATION -------------------------
+"""
+    DataFrame(svp_obj :: svp) :: DataFrame
 
-function parse_commandline()
-    s = ArgParseSettings()
+Convert [`svp`](@svp) structs to `DataFrame`s.
 
-    @add_arg_table! s begin
-        "--opt1"
-            help = "an option with an argument"
-        "--opt2", "-o"
-            help = "another option with an argument"
-            arg_type = Int
-            default = 0
-        "--flag1"
-            help = "an option without an argument, i.e. a flag"
-            action = :store_true
-        "arg1"
-            help = "a positional argument"
-            required = true
-    end
+...
+# Arguments
+- `svp_obj :: svp`: The SVP to convert
+...
 
-    return parse_args(s)
+See also [`svp`](@svp)
+
+# Examples
+```jldoctest
+julia> svp_mat = [# depth    velocity
+                        0      1540.4
+                       10      1540.5
+                       20      1540.7
+                       30      1534.4
+                       50      1523.3
+                       75      1519.6
+                      100      1518.5
+                      125      1517.9
+                      150      1517.3
+                      200      1516.6
+                      250      1516.5
+                      300      1516.2
+                      400      1516.4
+                      500      1517.2
+                      600      1518.2
+                      700      1519.5
+                      800      1521.0
+                      900      1522.6
+                     1000      1524.1
+                     1100      1525.7
+                     1200      1527.3
+                     1300      1529.0
+                     1400      1530.7
+                     1500      1532.4
+                     1750      1536.7
+                     2000      1541.0
+                 ].* 3.28084
+[...]
+julia> test_svp = svp(svp_mat[:, 1], svp_mat[:, 2])
+[...]
+julia> DataFrame(test_svp)
+[...]
+```
+"""
+function DataFrame(svp_obj :: svp) :: DataFrame
+    DataFrame(depth = svp_obj.depth, velocity = svp_obj.velocity)
 end
 
 # EXECUTABLE SCRIPT MAIN FUNCTIONALITY -----------------------------------------
 
-function main()
-    parsed_args = parse_commandline()
-    println("Parsed args:")
-    for (arg,val) in parsed_args
-        println("    $arg => $val")
+"""
+See [`parse_commandline`](@parse_commandline) for argument description
+"""
+function main(;
+              ddepth :: Real,
+              drange :: Real,
+              emtdepth :: Union{Real, Nothing} = nothing,
+              tgtrange :: Union{Nothing, Real} = nothing,
+              maxdepth :: Union{Nothing, Real} = nothing,
+              minangle :: Union{Nothing, Real} = nothing,
+              maxangle :: Union{Nothing, Real} = nothing,
+              stepangle :: Union{Nothing, Real} = nothing,
+              velocity :: Union{Nothing, Real} = nothing,
+              freq :: Union{Nothing, Real} = nothing,
+              pdiameter :: Union{Nothing, Real} = nothing,
+              lelements :: Union{Nothing, Unsigned} = nothing,
+              lspacing :: Union{Nothing, Real} = nothing,
+              di :: Union{Nothing, Real} = nothing,
+              dionly :: Bool = false,
+              tl :: Union{Nothing, Real} = nothing,
+              tlonly :: Bool = false,
+              raycsv :: Union{Nothing, String} = nothing,
+              rayloadcsv :: Union{Nothing, String} = nothing,
+              bouncecsv :: Union{Nothing, String} = nothing,
+              svpcsv :: Union{Nothing, String} = nothing,
+              svpmat :: Union{Nothing, Matrix{<:Real}} = nothing,    # Not used by command line interface
+              sl :: Union{Nothing, Real} = nothing,
+              nlmean :: Union{Nothing, Real} = nothing,
+              nlsd :: Union{Nothing, Real} = nothing,
+              dt :: Union{Nothing, Real} = nothing
+             )
+    svp_obj = nothing
+    if !isnothing(svpcsv)
+        svp_df = DataFrame(CSV.File(svpcsv))
+        svp_obj = svp(svp_df.depth, svp_df.velocity)
+        svp_itp = svp_to_interpolation(svp_obj, Gridded(Linear()), Linear())
+        velocity = svp_itp(ddepth)
+    elseif !isnothing(svpmat)
+        svp_obj = svp(svpmat[:,1], svpmat[:,2])
+        svp_itp = svp_to_interpolation(svp_obj, Gridded(Linear()), Linear())
+        velocity = svp_itp(ddepth)
+    end
+    
+    if isnothing(di)
+        if (isnothing(velocity) || isnothing(freq))
+            error("Must have velocity and freq if di not specified")
+        end
+        wavelength = freq_to_wavelength(velocity, freq)
+        if !isnothing(pdiameter) && !isnothing(pelements)
+            # Assuming piston hydrophone
+            di = piston_di(pdiameter, wavelength)
+        elseif !isnothing(lelements) && !isnothing(lspacing)
+            # Assuming line sonar
+            di = line_di(lelements, lspacing, wavelength)
+        elseif dionly
+            error("Not enough information to determine directivity index")
+        end
+    end
+    if dionly
+        println(di)
+        return nothing
     end
 
-    svp_mat = [# depth    velocity
-                     0      1540.4
-                    10      1540.5
-                    20      1540.7
-                    30      1534.4
-                    50      1523.3
-                    75      1519.6
-                   100      1518.5
-                   125      1517.9
-                   150      1517.3
-                   200      1516.6
-                   250      1516.5
-                   300      1516.2
-                   400      1516.4
-                   500      1517.2
-                   600      1518.2
-                   700      1519.5
-                   800      1521.0
-                   900      1522.6
-                  1000      1524.1
-                  1100      1525.7
-                  1200      1527.3
-                  1300      1529.0
-                  1400      1530.7
-                  1500      1532.4
-                  1750      1536.7
-                  2000      1541.0
-              ].* 3.28084
-    test_svp = svp(svp_mat[:, 1], svp_mat[:, 2])
-    fine_test_svp = svp_refine(test_svp, max_depth = 14000)
+    if isnothing(tl)
+        # Logic here could be tightened; it seems that the current logic implied
+        # here will result in duplicate code
+        if !isnothing(rayloadcsv)
+            ray_combined_df = DataFrame(CSV.File(rayloadcsv))
+            containing_ray_pos = ray_position_above_df(ray_combined_df, drange,
+                                                       ddepth) |>
+                get_containing_rays_df
+            
+            if nrow(containing_ray_pos) == 0
+                tl = Inf
+            else
+                tl = min([raytrace_tl(
+                         r.lower_angle, r.upper_angle, r.depth_lower_angle/3,
+                         r.depth_upper_angle/3, detector_range/3
+                        ) for r in eachrow(containing_ray_pos)]...)
+            end
+        elseif !isnothing(svp_obj)
+            if (isnothing(maxdepth) || isnothing(minangle) ||
+                isnothing(maxangle) || isnothing(stepangle) ||
+                isnothing(tgtrange) || isnothing(emtdepth))
+                error("Called in raytracing mode; must have all of maxdepth, minangle, stepangle, maxangle, tgtrange, emtdepth")
+            end
+            fine_svp_obj = svp_refine(svp_obj, max_depth = maxdepth)
 
-    angles = [(-5.0:1.0:5.0)...].*π./180
-    tgtdepth = 100
-    ray_combined_df = raytrace_angle_df(fine_test_svp, 100.0, angles, 30 * 6000)
+            # plot(fine_svp_obj.velocity, fine_svp_obj.depth, yflip = true,
+            #      legend = false)
 
-    @df ray_combined_df plot(:range, :depth, group = :angle, yflip = true)
+            if maxangle < minangle
+                error("Must have minangle ≤ maxangle")
+            end
+            angles = [(minangle:stepangle:maxangle)...].*π./180
 
-    detector_depth = 5500
-    detector_range = 60000.0
-    containing_ray_pos = ray_position_above_df(ray_combined_df, detector_range,
-                                               detector_depth) |>
-        get_containing_rays_df
-    
-    mean([raytrace_tl(
-              r.lower_angle, r.upper_angle, r.depth_lower_angle/3,
-              r.depth_upper_angle/3, detector_range/3
-             ) for r in eachrow(containing_ray_pos)])
+            ray_combined_result = raytrace_angle_df(fine_svp_obj, emtdepth, angles,
+                                                    tgtrange)
+            ray_combined_df = ray_combined_result[:ray]
+            ray_bounce_bounce = ray_combined_result[:bounce]
+
+            if !isnothing(raycsv)
+                CSV.write(raycsv, ray_combined_df)
+            end
+            if !isnothing(bouncecsv)
+                CSV.write(bouncecsv, ray_combined_bounce)
+            end
+
+            # This is duplicate code; I don't know how to do it better
+            containing_ray_pos = ray_position_above_df(ray_combined_df, drange,
+                                                       ddepth) |>
+                get_containing_rays_df
+
+            if nrow(containing_ray_pos) == 0
+                tl = Inf
+            else
+                tl = min([raytrace_tl(
+                         r.lower_angle, r.upper_angle, r.depth_lower_angle/3,
+                         r.depth_upper_angle/3, detector_range/3
+                        ) for r in eachrow(containing_ray_pos)]...)
+            end
+        else
+            if isnothing(freq)
+                error("Need freq if computing transmission loss without ray tracing")
+            end
+            tl = spherical_tl(attenuation_coef_thorp(freq), drange)
+        end
+    end
+    if tlonly
+        println(tl)
+        return nothing
+    end
+
+    # @df ray_combined_df plot(:range, :depth, group = :angle, yflip = true,
+    #                          legend=false)
+
+    if isnothing(sl) || isnothing(nlmean) || isnothing(nlsd) || isnothing(dt)
+        error("sl, nlmean, nlsd, dt not all set when attempting to predict with
+              passive sonar equation.")
+    end
+
+    son_set = sonar_passive(sl, tl, Normal(nlmean, nlsd), di, dt)
+    println(detection_prob(son_set))
 end
 
 if !isinteractive()
-    main()
+    main(; parsed_args...)
+    
+    exit()
 end
+
+# Parameters for running main if desired
+test_args = Dict(
+    :ddepth => 100,
+    :drange => 1.2 * 10^5,
+    :minangle => -1.0,
+    :maxangle => 1.0,
+    :stepangle => 1.0,
+    :emtdepth => 1000,
+    :tgtrange => 30 * 6000,
+    :maxdepth => 14000,
+    :freq => 100,
+    :lelements => Unsigned(20),
+    :lspacing => 10,
+    :svpmat => [# depth    velocity 
+                      0      1540.4 
+                     10      1540.5 
+                     20      1540.7 
+                     30      1534.4 
+                     50      1523.3 
+                     75      1519.6 
+                    100      1518.5 
+                    125      1517.9 
+                    150      1517.3 
+                    200      1516.6 
+                    250      1516.5 
+                    300      1516.2 
+                    400      1516.4 
+                    500      1517.2 
+                    600      1518.2 
+                    700      1519.5 
+                    800      1521.0 
+                    900      1522.6 
+                   1000      1524.1 
+                   1100      1525.7 
+                   1200      1527.3 
+                   1300      1529.0 
+                   1400      1530.7 
+                   1500      1532.4 
+                   1750      1536.7 
+                   2000      1541.0 
+               ].* 3.28084,
+    :sl => 100,
+    :nlmean => 72,
+    :nlsd => 2,
+    :dt => 15
+)
+
+# main(; test_args...)
 
