@@ -119,8 +119,8 @@ struct ArcUniform <: ContinuousMultivariateDistribution
         if θ_min > θ_max
             error("Cannot have θ_min > θ_max")
         end
-        if θ_min < 0 || θ_max > 2π
-            error("Must have angles bounded: 0 ≤ θ_min ≤ θ_max ≤ 2π")
+        if θ_max - θ_min > 2π
+            error("Must select angles such that they are within a circle, or θ_max - θ_min ≤ 2π")
         end
         if length(center) ≠ 2
             error("Arenas must be two-dimensional")
@@ -192,19 +192,31 @@ reaching the most recent random location.
                                                   be rejected)
 - `speed::Real`: Speed of the submarine
 - `arena::Arena`: Arena in which the sub travels
+- `sonars::Vector{Process}`: All of the sonars in the arena able to hear the
+                             SSBN
 ...
 
-See also # TODO: SEE ALSO
+See also [`Arena`](@Arena)
 
 # Examples
 ```jldoctest
 julia> arn = Arena([0; 0], 10)
-[...]
+Arena([0, 0], 10)
 julia> sim = Simulation()
-[...]
+Simulation time: 0.0 active_process: nothing
 julia> @process ssbn(sim, [0; 0], MvNormal([0; 0], [1 0; 0 1]), 10/24, arn)
-[...]
+Process 1
 julia> run(sim, 100)
+[...]
+julia> sim2 = Simulation()
+Simulation time: 0.0 active_process: nothing
+julia> ssbn_start_pos_dist = ArcUniform([0; 0], 10, π/4, π/2)
+ArcUniform(center=[0, 0], radius=10, θ_min=0.7853981633974483, θ_max=1.5707963267948966)
+julia> ssbn_start_pos = rand(ssbn_start_pos_dist)
+[...]
+julia> @process ssbn(sim2, ssbn_start_pos, ArcUniform([0; 0], 1, 0, 2π), 10/24, arn)
+Process 1
+julia> run(sim2, 100)
 [...]
 ```
 """
@@ -212,7 +224,8 @@ julia> run(sim, 100)
                          start_pos::Vector{<:Real},
                          pos_dist::ContinuousMultivariateDistribution,
                          speed::Real,
-                         arena::Arena)
+                         arena::Arena,
+                         sonars::Vector{Process})
     if !iinarena(start_pos)
         error("start_pos must be in arena")
     end
@@ -230,6 +243,9 @@ julia> run(sim, 100)
         time_to_arrival = dist_to_travel / speed
         @yield timeout(env, time_to_arrival)
         pos = destination
+        for sensor in sonars
+            @yield interrupt(sensor)
+        end
     end
 end
 
@@ -272,36 +288,6 @@ function sample_pos_in_arena(pos_dist::ContinuousMultivariateDistribution,
         end
     end
     error("Maximum iterations reached; never found a position in arena")
-end
-
-@doc raw"""
-    sample_arc_uniform(r::Real, θ_min::Real, θ_max::Real)::Vector{<:Real}
-
-Sample uniformly at random the position on a circular arc
-
-The result is a two-dimensional vector.
-
-Sampling is done by first picking Θ such that $Θ ~ \text{UNIF}(θ_{\text{min}},
-θ_{\text{max}})$, the $x$ coordinate is $r \cos(Θ)$, and the $y$ coordinate is
-$r \sin(Θ)$.
-
-...
-# Arguments
-- `r::Real`: Radius of the circular arc to sample in
-- `θ_min::Real`: The minimum angle, in radians
-- `θ_max::Real`: The maximum angle, in radians
-...
-
-See also [`ssbn`](@ssbn)
-
-# Examples
-```jldoctest
-julia> sample_arc_uniform(10, 0, π/4)
-[...]
-```
-"""
-function sample_arc_uniform(r::Real, θ_min::Real, θ_max::Real)::Vector{<:Real}
-    # TODO: curtis: FUNCTION BODY -- Wed 12 Jul 2023 01:49:34 AM EDT
 end
 
 """
@@ -956,19 +942,64 @@ end
 # There is no x - d; I have not implemented a negative version of this random
 # variable
 
+"""
+    sonar(env::Environment,
+               id::Integer,
+               pos::Vector{<:Real},
+               pd::Any)
+
+Create sonar simulation instance in a DES
+
+The basic logic of a sonar is:
+
+* Listen for a SSBN after it moved
+* If a SSBN was detected, dispatch a MPRA.
+
+Sonars listen to a sub after it has made a move. Their setup is fairly simple.
+
+...
+# Arguments
+- `env::Environment`: Simulation environment
+- `id::Integer`: ID for a sonar instance
+- `pos::Vector{<:Real}`: The position of the sonar; *does not need to be in the
+                         arena
+- `pd::Any`: TODO: PARAMETER DESCRIPTION
+...
+
+See also # TODO: SEE ALSO
+
+# Examples
+```jldoctest
+julia> sonar()    # TODO: EXAMPLE
+[...] # TODO: OUTPUT
+```
+"""
+# TODO: THIS FUNCTION DOES NOT WORK (MAY NEED TO RESTRUCTURE COMPLETELY)
+function sonar(env::Environment,
+               id::Integer,
+               pos::Vector{<:Real},
+               pd::Any)
+    while true
+        try
+            # Don't do anything
+        catch
+            println("Sonar $id detection: $(rand() < 0.5)")
+        end
+    end
+end
+
 # EXECUTABLE SCRIPT MAIN FUNCTIONALITY -----------------------------------------
 
 function main( ; patrollength::Real=100, sims::Unsigned=1000)
     # Experimental code
+    arn = Arena([0; 0], 10)
     sim = Simulation()
-
-    @threads for i in 1:sims
-        simenv = Simulation()
-
-        @process ssbn(simenv)
-
-        run(simenv, patrollength)
-    end
+    start_pos_dist = ArcUniform([0; 0], 10, π/4, π/2)
+    ssbn_start_pos = rand(start_pos_dist)
+    sosus = [@process sonar(sim, i, rand(start_pos_dist), nothing) for i in 1:10]
+    @process ssbn(sim, ssbn_start_pos, ArcUniform([0; 0], 1, 0, 2π), 10/24, arn,
+                  sosus)
+    run(sim, 100)
 end
 
 if !isinteractive()
