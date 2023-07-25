@@ -1,0 +1,18 @@
+name = "SimpleSonar"
+uuid = "d18bbd5a-74e3-4cf6-b618-15777129f3f5"
+authors = ["Curtis Miller"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
+
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"

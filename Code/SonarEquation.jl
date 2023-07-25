@@ -233,7 +233,7 @@ struct svp
     depth :: Vector{Real}
     velocity :: Vector{Real}
     function svp(depth, velocity)
-        if length(depth) != length(velocity)
+        if length(depth) ≠ length(velocity)
             error("depth and velocity of unequal length")
         end
         new(sort(depth), velocity[sortperm(depth)])
@@ -253,6 +253,10 @@ is the velocity of sound in water, and $f$ is the frequency of the sound wave.
 ...
 # Arguments
 - `velocity :: Real`: Sound velocity
+    for i in eachindex(x)
+        @inbounds x[i] = d.radius * func_vec[1 + mod(i, 2)](d.θ_min +
+            (d.θ_max - d.θ_min) * rand(rng)) + d.center[1 + mod(i, 2)]
+    end
 - `freq :: Real`: Wave frequency
 ...
 
@@ -1167,6 +1171,64 @@ function DataFrame(svp_obj :: svp) :: DataFrame
     DataFrame(depth = svp_obj.depth, velocity = svp_obj.velocity)
 end
 
+"""
+    ray_df_to_tl(ray_df :: DataFrame, range :: Real, depth :: Real) :: Real
+
+Obtain transmission loss estimate from `DataFrame` of traced sound rays
+
+When multiple rays pass above or below a point, which ones to use for computing
+transmission loss is not clear. I opt here to use the minimum transmission loss.
+
+...
+# Arguments
+- `ray_df :: DataFrame`: `DataFrame` of rays traced with a function such as
+                         [`raytrace_angle_df`](@raytrace_angle_df)
+- `range :: Real`: The range of the sensor
+- `depth :: Real`: The depth of the sensor
+...
+
+See also [`ray_position_above_df`](@ray_position_above_df),
+[`get_containing_rays_df`](@get_containing_rays_df),
+[`raytrace_angle_df`](raytrace_angle_df)
+
+# Examples
+```jldoctest
+julia> svp_mat = [# depth    velocity
+                        0      1540.4
+                       10      1540.5
+                       20      1540.7
+                       30      1534.4
+                       50      1523.3
+                       75      1519.6
+                      100      1518.5
+                      125      1517.9
+                 ].* 3.28084
+[...]
+julia> test_svp = svp(svp_mat[:, 1], svp_mat[:, 2])
+[...]
+julia> fine_test_svp = svp_refine(test_svp, max_depth = 200)
+[...]
+julia> rad = raytrace_angle_df(fine_test_svp, 50, [-2 * π/180, 2 * π/180], 20)[:ray]
+[...]
+julia> ray_df_to_tl(rad, 20, 50)
+[...]
+```
+"""
+function ray_df_to_tl(ray_df :: DataFrame, range :: Real, depth :: Real) :: Real
+    containing_ray_pos = ray_position_above_df(ray_df, range,
+                                               depth) |>
+        get_containing_rays_df
+    
+    if nrow(containing_ray_pos) == 0
+        return Inf
+    else
+        return  min([raytrace_tl(
+                    r.lower_angle, r.upper_angle, r.depth_lower_angle/3,
+                    r.depth_upper_angle/3, drange/3
+                   ) for r in eachrow(containing_ray_pos)]...)
+    end
+end
+
 # EXECUTABLE SCRIPT MAIN FUNCTIONALITY -----------------------------------------
 
 """
@@ -1239,32 +1301,10 @@ function main(;
         # here will result in duplicate code
         if !isnothing(raydf)
             ray_combined_df = raydf
-            containing_ray_pos = ray_position_above_df(ray_combined_df, drange,
-                                                       ddepth) |>
-                get_containing_rays_df
-            
-            if nrow(containing_ray_pos) == 0
-                tl = Inf
-            else
-                tl = min([raytrace_tl(
-                         r.lower_angle, r.upper_angle, r.depth_lower_angle/3,
-                         r.depth_upper_angle/3, detector_range/3
-                        ) for r in eachrow(containing_ray_pos)]...)
-            end
+            tl = ray_df_to_tl(ray_combined_df, drange, ddepth)
         elseif !isnothing(rayloadcsv)
             ray_combined_df = DataFrame(CSV.File(rayloadcsv))
-            containing_ray_pos = ray_position_above_df(ray_combined_df, drange,
-                                                       ddepth) |>
-                get_containing_rays_df
-            
-            if nrow(containing_ray_pos) == 0
-                tl = Inf
-            else
-                tl = min([raytrace_tl(
-                         r.lower_angle, r.upper_angle, r.depth_lower_angle/3,
-                         r.depth_upper_angle/3, detector_range/3
-                        ) for r in eachrow(containing_ray_pos)]...)
-            end
+            tl = ray_df_to_tl(ray_combined_df, drange, ddepth)
         elseif !isnothing(svp_obj)
             if (isnothing(maxdepth) || isnothing(minangle) ||
                 isnothing(maxangle) || isnothing(stepangle) ||
@@ -1295,18 +1335,7 @@ function main(;
             end
 
             # This is duplicate code; I don't know how to do it better
-            containing_ray_pos = ray_position_above_df(ray_combined_df, drange,
-                                                       ddepth) |>
-                get_containing_rays_df
-
-            if nrow(containing_ray_pos) == 0
-                tl = Inf
-            else
-                tl = min([raytrace_tl(
-                         r.lower_angle, r.upper_angle, r.depth_lower_angle/3,
-                         r.depth_upper_angle/3, detector_range/3
-                        ) for r in eachrow(containing_ray_pos)]...)
-            end
+            tl = ray_df_to_tl(ray_combined_df, drange, ddepth)
         else
             if isnothing(freq)
                 error("Need freq if computing transmission loss without ray tracing")

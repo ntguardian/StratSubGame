@@ -132,6 +132,33 @@ struct ArcUniform <: ContinuousMultivariateDistribution
     end
 end
 
+"""
+    SonarListen
+
+Sonar listening information
+
+Provides necessary information to sound emitters during interruption to
+determine if the emitter was heard
+
+...
+# Fields
+- `id::Integer`: TODO: FIELD DESCRIPTION
+- `location::Vector{<:Real}`: TODO: FIELD DESCRIPTION
+...
+
+See also [`sonar`](@onar)
+"""
+struct SonarListen
+    id::Integer
+    location::Vector{<:Real}
+    function SonarListen(id, location)
+        if length(location) ≠ 2
+            error("Vector location must be two-dimensional")
+        end
+        new(id, location)
+    end
+end
+
 # FUNCTIONS --------------------------------------------------------------------
 
 """
@@ -166,18 +193,21 @@ function inarena(arena::Arena, position::Vector{<:Real})::Bool
 end
 
 """
-    ssbn(env::Environment,
-         start_pos::Vector{Real},
-         pos_dist::ContinuousMultivariateDistribution,
-         speed::Real,
-         arena::Arena)
-
-Create SSBN simulation instance in a DES
+    ssbn_patrol(env::Environment,
+                start_pos::Vector{Real},
+                pos_dist::ContinuousMultivariateDistribution,
+                speed::Real,
+                arena::Arena,
+                sonars::Vector{Process})
+       
+Create SSBN patrol simulation instance in a DES
 
 The basic logic of a boomer is:
 
 * Enter the patrol area (the simulation starts)
 * If the patrol is not over, find a new position
+* If a sonar test happens (which checks for a detection at regular intervals;
+  see [`sonar_test`](@sonar_test)), check for a detection
 
 Hence the SSBN's behavior is fairly simple: move to a new random location upon
 reaching the most recent random location.
@@ -192,11 +222,9 @@ reaching the most recent random location.
                                                   be rejected)
 - `speed::Real`: Speed of the submarine
 - `arena::Arena`: Arena in which the sub travels
-- `sonars::Vector{Process}`: All of the sonars in the arena able to hear the
-                             SSBN
 ...
 
-See also [`Arena`](@Arena)
+See also [`Arena`](@Arena), [`sonar_test`](@sonar_test)
 
 # Examples
 ```jldoctest
@@ -204,29 +232,28 @@ julia> arn = Arena([0; 0], 10)
 Arena([0, 0], 10)
 julia> sim = Simulation()
 Simulation time: 0.0 active_process: nothing
-julia> @process ssbn(sim, [0; 0], MvNormal([0; 0], [1 0; 0 1]), 10/24, arn)
+julia> @process ssbn_patrol(sim, [0; 0], MvNormal([0; 0], [1 0; 0 1]), 10/24, arn)
 Process 1
 julia> run(sim, 100)
 [...]
 julia> sim2 = Simulation()
 Simulation time: 0.0 active_process: nothing
-julia> ssbn_start_pos_dist = ArcUniform([0; 0], 10, π/4, π/2)
+julia> ssbn_patrol_start_pos_dist = ArcUniform([0; 0], 10, π/4, π/2)
 ArcUniform(center=[0, 0], radius=10, θ_min=0.7853981633974483, θ_max=1.5707963267948966)
-julia> ssbn_start_pos = rand(ssbn_start_pos_dist)
+julia> ssbn_patrol_start_pos = rand(ssbn_patrol_start_pos_dist)
 [...]
-julia> @process ssbn(sim2, ssbn_start_pos, ArcUniform([0; 0], 1, 0, 2π), 10/24, arn)
+julia> @process ssbn_patrol(sim2, ssbn_patrol_start_pos, ArcUniform([0; 0], 1, 0, 2π), 10/24, arn)
 Process 1
 julia> run(sim2, 100)
 [...]
 ```
 """
-@resumable function ssbn(env::Environment,
-                         start_pos::Vector{<:Real},
-                         pos_dist::ContinuousMultivariateDistribution,
-                         speed::Real,
-                         arena::Arena,
-                         sonars::Vector{Process})
-    if !iinarena(start_pos)
+@resumable function ssbn_patrol(env::Environment,
+                                start_pos::Vector{<:Real},
+                                pos_dist::ContinuousMultivariateDistribution,
+                                speed::Real,
+                                arena::Arena)
+    if !inarena(arena, start_pos)
         error("start_pos must be in arena")
     end
 
@@ -234,19 +261,58 @@ julia> run(sim2, 100)
     destination = pos
     dist_to_travel = 0
     time_to_arrival = 0
+    new_destination = false
 
     while true
         println("SSBN position: ($(pos[1]), $(pos[2])) at t=$(now(env))")
 
-        destination = sample_pos_in_arena(pos_dist + pos, arena)
+        if new_destination
+            destination = sample_pos_in_arena(pos_dist + pos, arena)
+        else
+            new_destination = true
+        end
+        sim_time_at_change = now(env)
         dist_to_travel = euclidean(pos, destination)
         time_to_arrival = dist_to_travel / speed
-        @yield timeout(env, time_to_arrival)
-        pos = destination
-        for sensor in sonars
-            @yield interrupt(sensor)
+        try
+            @yield timeout(env, time_to_arrival)
+            pos = destination
+        catch excpt
+            if excpt isa ConcurrentSim.InterruptException && excpt.cause isa SonarListen
+                println("Listened to by sonar $(excpt.cause.id) at $(excpt.cause.location)")
+                pos += speed * (now(env) - sim_time_at_change)/dist_to_travel *
+                         (destination - pos)
+                println("Detected by sonar $(excpt.cause.id): $(rand() < 0.5)")
+            else
+                throw(excpt)    # Different exception we do not process
+            end
         end
     end
+end
+
+"""
+    ssbn_travel(env::Environment, ttravel_ime::Real)
+
+TODO: BRIEF DESCRIPTION
+
+TODO: EXTENDED DESCRIPTION (OPTIONAL)
+
+...
+# Arguments
+- `env::Environment`: TODO: PARAMETER DESCRIPTION
+- `time::Real`: TODO: PARAMETER DESCRIPTION
+...
+
+See also # TODO: SEE ALSO
+
+# Examples
+```jldoctest
+julia> ssbn_travel()    # TODO: EXAMPLE
+[...] # TODO: OUTPUT
+```
+"""
+@resumable function travel(env::Environment, travel_time::Real)
+    @yield timeout(env, travel_time)
 end
 
 """
@@ -943,19 +1009,22 @@ end
 # variable
 
 """
-    sonar(env::Environment,
+    sona_testr(env::Environment,
                id::Integer,
                pos::Vector{<:Real},
+               time_between_listen::Real,
+               ssbn_proc::Process,
                pd::Any)
 
 Create sonar simulation instance in a DES
 
 The basic logic of a sonar is:
 
-* Listen for a SSBN after it moved
-* If a SSBN was detected, dispatch a MPRA.
+* Listen for a SSBN after some period of time
+* If an SSBN is heard, dispatch an MPRA to its location
 
-Sonars listen to a sub after it has made a move. Their setup is fairly simple.
+Sonars listen to a sub after some period of time. This results in interrupting
+the submarine's patrol in order to resolve the listening.
 
 ...
 # Arguments
@@ -963,28 +1032,44 @@ Sonars listen to a sub after it has made a move. Their setup is fairly simple.
 - `id::Integer`: ID for a sonar instance
 - `pos::Vector{<:Real}`: The position of the sonar; *does not need to be in the
                          arena
+- `time_between_listen::Real`: Time between listen checks
+- `ssbn_proc::Process`: The [`ssbn_patrol`](@ssbn_patro) process to listen to
+                        and potentially interrupt with a sonar check
 - `pd::Any`: TODO: PARAMETER DESCRIPTION
 ...
 
-See also # TODO: SEE ALSO
+See also [`ssbn_proc`](@ssbn_proc)
 
 # Examples
 ```jldoctest
-julia> sonar()    # TODO: EXAMPLE
-[...] # TODO: OUTPUT
+julia> sim = Simulation()
+Simulation time: 0.0 active_process: nothing
+julia> ssbn_patrol_start_pos_dist = ArcUniform([0; 0], 10, π/4, π/2)
+ArcUniform(center=[0, 0], radius=10, θ_min=0.7853981633974483, θ_max=1.5707963267948966)
+julia> ssbn_patrol_start_pos = rand(ssbn_patrol_start_pos_dist)
+[...]
+julia> ssbn_prc = @process ssbn_patrol(sim, ssbn_patrol_start_pos, ArcUniform([0; 0], 1, 0, 2π), 10/24, arn)
+Process 1
+julia> @process sonar_test(sim, 1, [0; 0], 5, ssbn_prc, 0)
+Process 3
+julia> run(sim, 100)
+[...]
 ```
 """
-# TODO: THIS FUNCTION DOES NOT WORK (MAY NEED TO RESTRUCTURE COMPLETELY)
-function sonar(env::Environment,
+@resumable function sonar_test(env::Environment,
                id::Integer,
                pos::Vector{<:Real},
-               pd::Any)
+               time_between_listen::Real,
+               ssbn_proc::Process,
+               pd::Any)    # TODO: NOT YET SURE WHAT TO DO FOR pd
+    if time_between_listen <= 0
+        error("Must have positive listening period")
+    end
+
     while true
-        try
-            # Don't do anything
-        catch
-            println("Sonar $id detection: $(rand() < 0.5)")
-        end
+        @yield timeout(env, time_between_listen)
+        println("Sonar $id listening")
+        @yield interrupt(ssbn_proc, SonarListen(id, pos))
     end
 end
 
@@ -996,9 +1081,9 @@ function main( ; patrollength::Real=100, sims::Unsigned=1000)
     sim = Simulation()
     start_pos_dist = ArcUniform([0; 0], 10, π/4, π/2)
     ssbn_start_pos = rand(start_pos_dist)
-    sosus = [@process sonar(sim, i, rand(start_pos_dist), nothing) for i in 1:10]
-    @process ssbn(sim, ssbn_start_pos, ArcUniform([0; 0], 1, 0, 2π), 10/24, arn,
-                  sosus)
+    #sosus = [@process sonar(sim, i, rand(start_pos_dist), nothing) for i in 1:10]
+    ssbn_sim = @process ssbn(sim, ssbn_start_pos, ArcUniform([0; 0], 1, 0, 2π), 10/24, arn)
+    @process sonar(sim, 0, [0; 0], 1/24, ssbn_proc, 0)
     run(sim, 100)
 end
 
@@ -1009,5 +1094,4 @@ if !isinteractive()
     end
     main()
 end
-
 
