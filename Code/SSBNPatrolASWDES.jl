@@ -44,6 +44,7 @@ using ResumableFunctions
 using ConcurrentSim
 using .Threads
 using Random
+using SimpleSonar
 
 import Base: length, rand, rand!, +, -
 import Distributions: pdf

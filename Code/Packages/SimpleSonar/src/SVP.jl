@@ -36,7 +36,7 @@ end
 
 Get index of depth slices
 
-The returned integer corresponds to the correct depth slice of the [`svp`](@svp)
+The returned integer corresponds to the correct depth slice of the [`svp`](#SimpleSonar.svp)
 object. The input depth can exceed the lowest depth in `svp`, but not be too
 shallow.
 
@@ -46,7 +46,7 @@ shallow.
 - `depth :: Real`: Input depth
 ...
 
-See also [`svp`](@svp)
+See also [`svp`](#SimpleSonar.svp)
 
 # Examples
 ```jldoctest
@@ -75,7 +75,7 @@ end
     svp_to_interpolation(svp_obj :: svp, itp_type :: InterpolationType,
                               ext_type :: BoundaryCondition) :: Any
 
-Turn a [`svp`](@svp) into an interpolation function
+Turn a [`svp`](#SimpleSonar.svp) into an interpolation function
 
 This function's utility comes from its ability to take limited sound velocity
 profile data and convert it into a function that allows for a better selection
@@ -84,12 +84,12 @@ raytracing algorithm.
 
 ...
 # Arguments
-- `svp_obj :: svp`: [`svp`](@svp) `struct` to be turned into an interpolation
+- `svp_obj :: svp`: [`svp`](#SimpleSonar.svp) `struct` to be turned into an interpolation
 - `itp_type`: Set how interpolation will be done
 - `ext_type`: Set how extrapolation will be done
 ...
 
-See also [`svp`](@svp)
+See also [`svp`](#SimpleSonar.svp)
 
 # Examples
 ```jldoctest
@@ -144,22 +144,22 @@ end
                max_depth :: Real = svp_obj.depth[end];
                itp_type = Gridded(Linear()), ext_type = Linear()) :: svp
 
-Increase the resolution of a [`svp`](@svp) via interpolation and extrapolation
+Increase the resolution of a [`svp`](#SimpleSonar.svp) via interpolation and extrapolation
 
-The resulting [`svp`](@svp) will have a constant distance between depths and may
+The resulting [`svp`](#SimpleSonar.svp) will have a constant distance between depths and may
 extend to otherwise unseen depths.
 
 ...
 # Arguments
-- `svp_obj :: svp`: [`svp`](@svp) object to interpolate
-- `Δ :: Real`: Difference between depth levels in new [`svp`](@svp)
-- `min_depth :: Real = 0`: Minimum depth of new [`svp`](@svp)
-- `max_depth :: Real = svp_obj.depth[end]`: Maximum depth of new [`svp`](@svp)
+- `svp_obj :: svp`: [`svp`](#SimpleSonar.svp) object to interpolate
+- `Δ :: Real`: Difference between depth levels in new [`svp`](#SimpleSonar.svp)
+- `min_depth :: Real = 0`: Minimum depth of new [`svp`](#SimpleSonar.svp)
+- `max_depth :: Real = svp_obj.depth[end]`: Maximum depth of new [`svp`](#SimpleSonar.svp)
 - `itp_type = Gridded(Linear())`: Set how interpolation will be done
 - `ext_type = Linear()`: Set how extrapolation will be done
 ...
 
-See also [`svp`](@svp), [`svp_to_interpolation`](@svp_to_interpolation)
+See also [`svp`](#SimpleSonar.svp), [`svp_to_interpolation`](#SimpleSonar.svp_to_interpolation)
 
 # Examples
 ```jldoctest
@@ -194,14 +194,14 @@ end
 """
     DataFrame(svp_obj :: svp) :: DataFrame
 
-Convert [`svp`](@svp) structs to `DataFrame`s.
+Convert [`svp`](#SimpleSonar.svp) structs to `DataFrame`s.
 
 ...
 # Arguments
 - `svp_obj :: svp`: The SVP to convert
 ...
 
-See also [`svp`](@svp)
+See also [`svp`](#SimpleSonar.svp)
 
 # Examples
 ```jldoctest

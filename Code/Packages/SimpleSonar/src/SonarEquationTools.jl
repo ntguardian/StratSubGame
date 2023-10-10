@@ -17,8 +17,10 @@ types.
 
 ...
 # Subtypes
-- [`sonar_noise`](@sonar_nosie): Sonar equations for noise environments
-- [`sonar_passive`](@sonar_passive): Sonar equations for passive listening
+- [`sonar_noise`](#SimpleSonar.sonar_nosie): Sonar equations for noise
+                                             environments
+- [`sonar_passive`](#SimpleSonar.sonar_passive): Sonar equations for passive
+                                                 listening
 ...
 """
 abstract type Sonar end
@@ -45,7 +47,7 @@ strength, NL the noise level, and DT the detection threshold (all in decibels).
 - `dt :: Real`: Detection threshold
 ...
 
-See also [`Sonar`](@Sonar)
+See also [`Sonar`](#SimpleSonar.Sonar)
 """
 struct sonar_noise <: Sonar
     sl :: Real
@@ -77,13 +79,45 @@ level, and DT the detection threshold (all in decibels).
 - `dt :: Real`: Detection threshold
 ...
 
-See also [`Sonar`](@Sonar)
+See also [`Sonar`](#SimpleSonar.Sonar)
 """
 struct sonar_passive <: Sonar
     sl :: Real
     tl :: Real
     nl :: UnivariateDistribution
     di :: Real
+    dt :: Real
+end
+
+@doc raw"""
+    sonar_reverb
+
+Sonar equation parameters for passive sonar conditions
+
+The sonar equation for active sonar with reverberation is
+```math
+\text{SL} - 2\text{TL} + \text{TS} = \text{RL} + \text{DT}
+```
+with SL representing the source level, TL the transmission loss, RL the
+reverberation level, TS the target strength, and DT the detection threshold (all
+in decibels).
+
+...
+# Fields
+- `sl :: Real`: Source level
+- `tl :: Real`: Transmission loss
+- `ts :: Real`: Target strength
+- `rl :: UnivariateDistribution`: Reverberation level
+- `dt :: Real`: Detection threshold
+...
+
+See also [`Sonar`](#SimpleSonar.Sonar)
+"""
+struct sonar_reverb <: Sonar
+    sl :: Real
+    tl :: Real
+    ts :: Real
+    rl :: UnivariateDistribution
     dt :: Real
 end
 
@@ -105,7 +139,7 @@ detected.
 - `wavelength :: Real`: Wavelength of the sound to be detected
 ...
 
-See also [`line_di`](@line_di)
+See also [`line_di`](#SimpleSonar.line_di)
 
 # Examples
 ```jldoctest
@@ -136,7 +170,7 @@ wavelength of the sound wave to be detected.
 - `wavelength :: Real`: The wavelength of the sound to be detected
 ...
 
-See also [`piston_di`](@piston_di)
+See also [`piston_di`](#SimpleSonar.piston_di)
 
 # Examples
 ```jldoctest
@@ -166,7 +200,7 @@ Thorp's computation is for 39°F/4°C at 3000 ft deep
 - `freq :: Real`: Frequency (kHz)
 ...
 
-See also [`spherical_tl`](@spherical_tl)
+See also [`spherical_tl`](#SimpleSonar.spherical_tl)
 
 # Examples
 ```jldoctest
@@ -192,7 +226,7 @@ Transmission loss, as described by spherical spreading
 - `range :: Real`: Range, in yards
 ...
 
-See also [`attenuation_coef_thorp`](@attenuation_coef_thorp)
+See also [`attenuation_coef_thorp`](#SimpleSonar.attenuation_coef_thorp)
 
 # Examples
 ```jldoctest
@@ -216,7 +250,7 @@ If this quantity exceeds ``\text{DT} - \text{NL}``, a detection occured.
 - `se :: sonar_noise`: Sonar equation object
 ...
 
-See also [`sonar_noise`](@sonar_noise), [`Base.rand`](@Base.rand)
+See also [`sonar_noise`](#SimpleSonar.sonar_noise), [`Base.rand`](Base.rand)
 
 # Examples
 ```jldoctest
@@ -241,7 +275,7 @@ If this quantity exceeds ``\text{DT} - \text{NL}``, a detection occured.
 - `se :: sonar_passive`: Sonar equation object
 ...
 
-See also [`sonar_noise`](@sonar_noise), [`Base.rand`](@Base.rand)
+See also [`sonar_noise`](#SimpleSonar.sonar_noise), [`Base.rand`](#SimpleSonar.Base.rand)
 
 # Examples
 ```jldoctest
@@ -269,7 +303,7 @@ fluctuation.
 - `se :: Sonar`: Sonar object to randomize
 ...
 
-See also [`Sonar`](@Sonar)
+See also [`Sonar`](#SimpleSonar.Sonar)
 
 # Examples
 ```julia-repl
@@ -297,7 +331,7 @@ for determining the detection threshold.
 - `se :: Sonar`: Sonar object to randomize
 ...
 
-See also [`Sonar`](@Sonar)
+See also [`Sonar`](#SimpleSonar.Sonar)
 
 # Examples
 ```jldoctest
@@ -330,8 +364,8 @@ of the noise.
 - `range :: Real`: Range to target, in yards
 ...
 
-See also [`get_containing_rays_df`](@get_containing_rays_df),
-[`raytrace_angle_df`](@raytrace_angle_df)
+See also [`get_containing_rays_df`](#SimpleSonar.get_containing_rays_df),
+[`raytrace_angle_df`](#SimpleSonar.raytrace_angle_df)
 
 # Examples
 ```jldoctest
@@ -362,14 +396,14 @@ transmission loss is not clear. I opt here to use the minimum transmission loss.
 ...
 # Arguments
 - `ray_df :: DataFrame`: `DataFrame` of rays traced with a function such as
-                         [`raytrace_angle_df`](@raytrace_angle_df)
+                         [`raytrace_angle_df`](#SimpleSonar.raytrace_angle_df)
 - `range :: Real`: The range of the sensor
 - `depth :: Real`: The depth of the sensor
 ...
 
-See also [`ray_position_above_df`](@ray_position_above_df),
-[`get_containing_rays_df`](@get_containing_rays_df),
-[`raytrace_angle_df`](raytrace_angle_df)
+See also [`ray_position_above_df`](#SimpleSonar.ray_position_above_df),
+[`get_containing_rays_df`](#SimpleSonar.get_containing_rays_df),
+[`raytrace_angle_df`](#SimpleSonar.raytrace_angle_df)
 
 # Examples
 ```jldoctest
@@ -404,7 +438,7 @@ function ray_df_to_tl(ray_df :: DataFrame, range :: Real, depth :: Real) :: Real
     else
         return  min([raytrace_tl(
                     r.lower_angle, r.upper_angle, r.depth_lower_angle/3,
-                    r.depth_upper_angle/3, drange/3
+                    r.depth_upper_angle/3, range/3
                    ) for r in eachrow(containing_ray_pos)]...)
     end
 end

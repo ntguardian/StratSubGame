@@ -10,11 +10,41 @@ if (!suppressPackageStartupMessages(require("argparser"))) {
   require("argparser")
 }
 
-library(lpSolve)
-library(tibble)
-library(dplyr)
-library(purrr)
-library(tidyr)
+suppressPackageStartupMessages(library(lpSolve))
+suppressPackageStartupMessages(library(tibble))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(purrr))
+suppressPackageStartupMessages(library(tidyr))
+
+# COMMAND LINE INTERFACE -------------------------------------------------------
+
+p <- arg_parser("Calculate Stackelberg strategic solution to Kola peninsula theater anti-submarine warfare (ASW) scenario")
+p <- add_argument(p, "--ships", type = "integer", nargs = 1, default = 0,
+                  help = "Numbver of ASW ships")
+p <- add_argument(p, "--subs", type = "integer", nargs = 1, default = 0,
+                  help = "Numbver of ASW submarines")
+p <- add_argument(p, "--planes", type = "integer", nargs = 1, default = 0,
+                  help = "Numbver of ASW airplanes")
+p <- add_argument(p, "--shipssweep", type = "numeric", default = 1,
+                  nargs = 1, help = "Sweep width of ASW ships")
+p <- add_argument(p, "--subssweep", type = "numeric", default = 1,
+                  nargs = 1, help = "Sweep width of ASW submarines")
+p <- add_argument(p, "--planessweep", type = "numeric", default = 15,
+                  nargs = 1, help = "Sweep width of ASW airplanes")
+p <- add_argument(p, "--kolawidth", type = "numeric", default = 1/4,
+                  nargs = 1, help = "Width of the Kola peninsula gap")
+p <- add_argument(p, "--greenicewidth", type = "numeric", default = 1,
+                  nargs = 1, help = "Width of the Greenland-Iceland gap")
+p <- add_argument(p, "--iceukwidth", type = "numeric", default = 2,
+                  nargs = 1, help = "Width of the Iceland-UK gap")
+p <- add_argument(p, "--searchconst", type = "numeric", default = 1,
+                  nargs = 1, help = "Multiplicative constant with all effective widths")
+p <- add_argument(p, "--delouse", type = "numeric", default = 1,
+                  nargs = 1, help = "Effective sweep width of all delousing assets")
+p <- add_argument(p, "--maxtime", type = "numeric", default = 5,
+                  nargs = 1, help = "Maximum time on station for intruder submarine")
+p <- add_argument(p, "--greenicetimeloss", type = "numeric", default = 1,
+                  nargs = 1, help = "Time lost by transiting through the Greenland-Iceland gap relative to traveling through the Iceland-UK gap")
 
 # FUNCTIONS --------------------------------------------------------------------
 
@@ -164,6 +194,9 @@ generate_asw_kola_strats <- function(ships, subs, planes, ...) {
                                  ships_green_ice = ships_green_ice,
                                  ...))
   }, simplify = FALSE))}))}))
+  if (!is.matrix(game_mat)) {
+    game_mat <- t(as.matrix(game_mat))
+  }
   colnames(game_mat) <- gsub("green_ice.subs_green_ice", "pay_green_ice",
     gsub("ice_uk.subs_green_ice", "pay_ice_uk", colnames(game_mat)))
   rownames(game_mat) <- NULL
@@ -187,7 +220,7 @@ generate_asw_kola_strats <- function(ships, subs, planes, ...) {
 #' generate_sub_kola_strats(generate_asw_kola_strats(5, 4, 3))
 #' @export
 generate_sub_kola_strats <- function(asw_strat_matrix, ...) {
-  asw_probs <- asw_strat_matrix[, c("pay_green_ice", "pay_ice_uk")]
+  asw_probs <- asw_strat_matrix[, c("pay_green_ice", "pay_ice_uk"), drop = FALSE]
   colnames(asw_probs) <- c("green_ice", "ice_uk")
   sub_payoff <- apply(asw_probs, MARGIN = 1,
     FUN = function(asw_intercept_probs) {
@@ -196,7 +229,8 @@ generate_sub_kola_strats <- function(asw_strat_matrix, ...) {
   rownames(sub_payoff) <- c("pay_green_ice", "pay_ice_uk")
   cbind(asw_strat_matrix[,
                          !(colnames(asw_strat_matrix) %in% c("pay_green_ice",
-                                                             "pay_ice_uk"))],
+                                                             "pay_ice_uk")),
+                         drop = FALSE],
     t(sub_payoff))
 }
 
@@ -255,8 +289,11 @@ strat_linear_prog_solve <- function(asw_coef, sub_strat_col, sub_strat_matrix) {
 #'                  frame
 #' @param full Return the full data frame; otherwise, only the rows with the
 #'             best value for the ASW force
-#' @return A \code{\link[tibble]{tibble}} containing optimal payoff to ASW force
-#'         and the corresponding optimal strategy of the submarine force
+#' @return A list with the solution matrix (\code{solution_df}), an identifier
+#'         for the optimal strategies (\code{solution_codes}), and the optimal
+#'         strategy payoff (\code{solution_value}); see
+#'         \code{\link{strat_linear_prog_solve}} for interpretation of number
+#'         associated with \code{solution_codes}
 #' @examples
 #' asw_strat <- generate_asw_kola_strats(5, 4, 3)
 #' sub_strat <- generate_sub_kola_strats(asw_strat)
@@ -270,10 +307,10 @@ asw_chokepoint_game_solution_df <- function(asw_strat_matrix, sub_strat_matrix,
     game_cols <- which(colnames(asw_strat_matrix) %in% game_cols)
   }
   not_game_cols <- which(!(1:ncol(asw_strat_matrix) %in% game_cols))
-  asw_game_mat <- asw_strat_matrix[, game_cols]
-  sub_game_mat <- sub_strat_matrix[, game_cols]
+  asw_game_mat <- asw_strat_matrix[, game_cols, drop = FALSE]
+  sub_game_mat <- sub_strat_matrix[, game_cols, drop = FALSE]
 
-  solution_df <- as_tibble(asw_strat_matrix[, not_game_cols]) %>%
+  solution_df <- as_tibble(asw_strat_matrix[, not_game_cols, drop = FALSE]) %>%
     bind_cols(as_tibble(asw_game_mat) %>%
       rename_with(.fn = ~ paste0(.x, "_asw"))) %>%
     bind_cols(as_tibble(sub_game_mat) %>%
@@ -338,25 +375,18 @@ main <- function(ships = 0,
     max_time_on_station = maxtime,
     time_lost_green_ice = greenicetimeloss
   )
-  solution <- asw_chokepoint_game_solution_df(asw_strat, sub_strat,
+  solution <- asw_chokepoint_game_solution_df(asw_strats, sub_strats,
                                               c("pay_green_ice", "pay_ice_uk"))
   solution_df <- solution$solution_df
   solution_col <- paste0(names(solution$solution_codes), "_optim")
 
-  cat("Probability of interception:", solution$value, "\n")
+  cat("Probability of interception:", solution$solution_value, "\n")
   cat("Sub transit path:", substr(names(solution$solution_codes), 5, 999), "\n")
 }
 
 # INTERFACE DEFINITION AND COMMAND LINE IMPLEMENTATION -------------------------
 
 if (sys.nframe() == 0) {
-  p <- arg_parser("This is a template for executable R scripts.")
-  p <- add_argument(p, "foo", type = "character", nargs = 1,
-                    help = "A positional command-line argument")
-  p <- add_argument(p, "--bar", type = "integer", default = 0,
-                    nargs = 1, help = "A command-line option")
-  p <- add_argument(p, "--baz", flag = TRUE, help = "A command-line flag")
-
   cl_args <- parse_args(p)
   cl_args <- cl_args[!(names(cl_args) %in% c("help", "opts"))]
   if (any(sapply(cl_args, is.na))) {

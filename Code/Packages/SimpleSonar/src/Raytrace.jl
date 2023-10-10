@@ -26,7 +26,7 @@ and location of either surface or bottom bounces of the ray.
 
 ...
 # Arguments
-- `svp :: svp`: [`svp`](@svp) `struct` with the sound velocity profile data
+- `svp :: svp`: [`svp`](#SimpleSonar.svp) `struct` with the sound velocity profile data
 - `depth :: Real`: The depth of the ray emitter
 - `angle :: Real`: Initial angle of the ray
 - `max_position :: Real`: The largest position before the raytrace terminates;
@@ -35,7 +35,7 @@ and location of either surface or bottom bounces of the ray.
 - `max_iter :: UInt128`: Maximum number of iterations
 ...
 
-See also [`raytrace_step`](@raytrace_step), [`svp`](@svp), [`snell`](@snell)
+See also [`raytrace_step`](#SimpleSonar.raytrace_step), [`svp`](#SimpleSonar.svp), [`snell`](#SimpleSonar.snell)
 
 # Examples
 ```jldoctest
@@ -159,7 +159,7 @@ that the ray will interact with something first and never reach the surface
                       from the source
 ...
 
-See also [`raytrace`](@raytrace)
+See also [`raytrace`](#SimpleSonar.raytrace)
 
 # Examples
 ```jldoctest
@@ -200,7 +200,7 @@ sound ray is leaving, and ``v_2`` is the velocity of sound in the new layer.
 - `velocity2 :: Real`: Sound velocity at entering layer
 ...
 
-See also [`raytrace`](@raytrace)
+See also [`raytrace`](#SimpleSonar.raytrace)
 
 # Examples
 ```jldoctest
@@ -233,7 +233,7 @@ with rays depending on initial angle. Also collects bounce information.
 
 ...
 # Arguments
-- `svp_obj`: A [`svp`](@svp) object
+- `svp_obj`: A [`svp`](#SimpleSonar.svp) object
 - `depth`: Depth of sound emitter
 - `angles`: Angles to trace
 - `max_position`: Maximum position of a ray
@@ -244,7 +244,7 @@ with rays depending on initial angle. Also collects bounce information.
 - `max_iter = typemax(UInt128)`: Maximum iteration number for raytracing
 ...
 
-See also [`raytrace`](raytrace)
+See also [`raytrace`](#SimpleSonar.raytrace)
 
 # Examples
 ```jldoctest
@@ -314,7 +314,7 @@ in calculating transmission loss.
 - `depth :: Real`: The depth of the point at which to compute transmission loss
 ...
 
-See also [`raytrace_angle_df`](@raytrace_angle_df)
+See also [`raytrace_angle_df`](#SimpleSonar.raytrace_angle_df)
 
 # Examples
 ```jldoctest
@@ -356,7 +356,7 @@ Get rays above or below a given position depending on angle and the depth of the
 rays
 
 This is essentially the next step after using
-[`ray_position_above_df`](@ray_position_above_df).
+[`ray_position_above_df`](#SimpleSonar.ray_position_above_df).
 
 ...
 # Arguments
@@ -365,7 +365,7 @@ This is essentially the next step after using
                          and whether a ray is above or below a certain point
 ...
 
-See also [`ray_position_above_df`](@ray_position_above_df)
+See also [`ray_position_above_df`](#SimpleSonar.ray_position_above_df)
 
 # Examples
 ```jldoctest

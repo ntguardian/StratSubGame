@@ -16,14 +16,10 @@ is the velocity of sound in water, and ``f`` is the frequency of the sound wave.
 ...
 # Arguments
 - `velocity :: Real`: Sound velocity
-    for i in eachindex(x)
-        @inbounds x[i] = d.radius * func_vec[1 + mod(i, 2)](d.θ_min +
-            (d.θ_max - d.θ_min) * rand(rng)) + d.center[1 + mod(i, 2)]
-    end
 - `freq :: Real`: Wave frequency
 ...
 
-See also [`wavelength_to_freq`](@wavelength_to_freq)
+See also [`wavelength_to_freq`](#SimpleSonar.wavelength_to_freq)
 
 # Examples
 ```jldoctest
@@ -49,7 +45,7 @@ is the velocity of sound in water, and ``f`` is the frequency of the sound wave.
 - `wavelength :: Real`: Sound wavelength
 ...
 
-See also [`freq_to_wavelength`](@freq_to_wavelength)
+See also [`freq_to_wavelength`](#SimpleSonar.freq_to_wavelength)
 
 # Examples
 ```jldoctest
