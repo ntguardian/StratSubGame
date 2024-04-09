@@ -129,8 +129,8 @@ end
 Directivity index of a piston sonar
 
 This is a theoretically derived directivity index of a piston sonar, which has
-been found to be ``\log_{10}\left(\left(\frac{π D}{λ}\right)^2\right), with ``D``
-being the diameter of the sonar and ``λ`` the wavelength of the sound to be
+been found to be ``\log_{10}\left(\left(\frac{\pi D}{\lambda}\right)^2\right)``, with ``D``
+being the diameter of the sonar and ``\lambda`` the wavelength of the sound to be
 detected.
 
 ...
@@ -158,9 +158,13 @@ end
 Directivity index of a line sonar
 
 For a line transducer directivity index, theoretical calculations suggest the
-directivity index is ``\log_{10}\left(\frac{n}{1 + \frac{2}{n}
-\sum_{ρ=1}^{n-1}\frac{(n - ρ)\sin(2ρπd/λ)}{2ρπd/λ}}\right)``, where ``n`` is the
-number of elements in the array, ``d`` the spacing of the elements, and ``λ`` the
+directivity index is
+```math
+\log_{10}\left(\frac{n}{1 + \frac{2}{n}
+\sum_{\rho=1}^{n-1}\frac{(n - \rho)\sin(2\rho\pid/\lambda)}{2\rho\pid/\lambda}}\right)
+``` 
+where ``n`` is the
+number of elements in the array, ``d`` the spacing of the elements, and ``\lambda`` the
 wavelength of the sound wave to be detected.
 
 ...
@@ -250,7 +254,7 @@ If this quantity exceeds ``\text{DT} - \text{NL}``, a detection occured.
 - `se :: sonar_noise`: Sonar equation object
 ...
 
-See also [`sonar_noise`](#SimpleSonar.sonar_noise), [`Base.rand`](Base.rand)
+See also [`sonar_noise`](#SimpleSonar.sonar_noise), [`Base.rand`](#Base.rand)
 
 # Examples
 ```jldoctest
@@ -351,8 +355,8 @@ end
 Computes transmission loss from a raytracing diagram
 
 The formula for target loss given a raytracing diagram is $\text{TL} = 10 \log
-\left(rΔh/Δθ\right)$, where $r$ is range, $Δh$ is the difference in depth
-between two rays separated by $Δθ$ radians in angle and adjacent at the origin
+\left(r\Deltah/\Delta\theta\right)$, where $r$ is range, $\Deltah$ is the difference in depth
+between two rays separated by $\Delta\theta$ radians in angle and adjacent at the origin
 of the noise.
 
 ...

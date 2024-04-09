@@ -4,7 +4,9 @@
 # curtis
 # Make documentation for SimpleSonar
 
-using Documenter, SimpleSonar
+using Documenter, SimpleSonar, DocumenterLaTeX
 
-makedocs(sitename="SimpleSonar.jl")
+makedocs(sitename="SimpleSonar.jl",
+         format=LaTeX(),
+         pages=["index.md"])
 

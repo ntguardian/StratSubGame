@@ -32,7 +32,6 @@ line_di
 attenuation_coef_thorp
 spherical_tl
 sonar_threshold
-sonar_threshold
 Base.rand(::Sonar)
 detection_prob
 raytrace_tl

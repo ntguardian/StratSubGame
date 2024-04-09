@@ -130,21 +130,21 @@ Compute the next position of a sound ray
 
 A raytracing step draws a straight line between two layers of ocean depth, given
 the angle of the ray. If ``d_1`` is the first depth, ``d_2``, the second depth with
-``d_1 < d_2``, the ray enters at angle ``θ`` and at horizontal position ``p``, we can
-determine the ray's new position and which depth slice it will appear. If ``θ >
+``d_1 < d_2``, the ray enters at angle ``\theta`` and at horizontal position ``p``, we can
+determine the ray's new position and which depth slice it will appear. If ``\theta >
 0``, the ray is travelling from ``d_2`` to ``d_1``; the ray's starting position is
 ``(p, d_2)``, and its new position will be
 
-``\left(\cot(θ)(d_2 - d_1) + p, d_1\right).``
+``\left(\cot(\theta)(d_2 - d_1) + p, d_1\right).``
 
-If the ray has an angle ``θ < 0``, it is then starting from position ``(p, d_1)``,
+If the ray has an angle ``\theta < 0``, it is then starting from position ``(p, d_1)``,
 and will exit at
 
-``\left(-\cot(θ)(d_2 - d_1) + p, d_2\right).``
+``\left(-\cot(\theta)(d_2 - d_1) + p, d_2\right).``
 
 The tuples above are returned by this function.
 
-Exceptional cases include ``θ = 0`` and ``\left|θ\right| > π/2``. For horizontal
+Exceptional cases include ``\theta = 0`` and ``\left|\theta\right| > \pi/2``. For horizontal
 rays, the ray will continue onward forever. For vertical rays, it will go
 directly up to the surface. Rays cannot go directly downward; it is presumed
 that the ray will interact with something first and never reach the surface
@@ -189,13 +189,13 @@ end
 
 Uses Snell's law to compute ray angle in new layer based on velocity comparison
 
-This essentially solves ``cos(θ_1)/v_1 = cos(θ_2)/v_2`` for ``θ_2``, where ``v_1`` is
-the sound velocity of the depth layer being left, ``θ_1`` the angle at which the
+This essentially solves ``\cos(\theta_1)/v_1 = \cos(\theta_2)/v_2`` for ``\theta_2``, where ``v_1`` is
+the sound velocity of the depth layer being left, ``\theta_1`` the angle at which the
 sound ray is leaving, and ``v_2`` is the velocity of sound in the new layer.
 
 ...
 # Arguments
-- `angle :: Real`: Ray entering angle; must be between ``-π/2`` and ``π/2``
+- `angle :: Real`: Ray entering angle; must be between ``-\pi/2`` and ``\pi/2``
 - `velocity1 :: Real`: Sound velocity at exiting layer
 - `velocity2 :: Real`: Sound velocity at entering layer
 ...

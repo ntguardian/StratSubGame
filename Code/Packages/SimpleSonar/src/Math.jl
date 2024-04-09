@@ -10,7 +10,7 @@
 
 Convert frequency to wavelength
 
-Returns the result of ``λ=v/f``, where ``λ`` is the wavelength of a sound wave, ``v``
+Returns the result of ``\lambda=v/f``, where ``\lambda`` is the wavelength of a sound wave, ``v``
 is the velocity of sound in water, and ``f`` is the frequency of the sound wave.
 
 ...
@@ -36,7 +36,7 @@ end
 
 Convert wavelength to frequency
 
-Returns the result of ``f=v/λ``, where ``λ`` is the wavelength of a sound wave, ``v``
+Returns the result of ``f=v/\lambda``, where ``\lambda`` is the wavelength of a sound wave, ``v``
 is the velocity of sound in water, and ``f`` is the frequency of the sound wave.
 
 ...

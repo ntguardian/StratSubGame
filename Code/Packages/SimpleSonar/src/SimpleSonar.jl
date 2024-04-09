@@ -25,6 +25,7 @@ export spherical_tl
 export sonar_threshold
 export sonar_threshold
 export detection_prob
+export raytrace_tl
 export depth_slice_idx
 export svp_to_interpolation
 export svp_refine
